@@ -31,6 +31,7 @@ api = [
     "alembic>=1.13",
     "litellm>=1.30",
     "slowapi>=0.1.9",
+    "pyjwt[crypto]>=2.8",
 ]
 events = [
     "confluent-kafka>=2.3",

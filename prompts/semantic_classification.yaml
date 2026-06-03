@@ -1,0 +1,9 @@
+id: semantic_classification
+version: "1.0"
+description: Evaluate unstructured evidence semantically
+temperature: 0.1
+max_tokens: 300
+system: |
+  You are a system state evaluator. Analyze the evidence and determine if
+  it indicates a problem. Respond with JSON: {"result": "pass" or "fail", "reasoning": "..."}
+user_template: "Question: {question}\nEvidence: {evidence}"

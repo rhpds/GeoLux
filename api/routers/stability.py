@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -56,7 +56,8 @@ def get_thresholds():
 
 
 @router.put("/thresholds")
-def update_thresholds(body: StabilityThresholdUpdate):
+@limiter.limit("5/minute")
+def update_thresholds(request: Request, body: StabilityThresholdUpdate):
     if not (0.0 <= body.threshold <= 1.0):
         raise HTTPException(status_code=400, detail="Threshold must be between 0.0 and 1.0")
     import api.routers._shared as _shared

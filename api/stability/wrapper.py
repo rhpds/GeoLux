@@ -25,6 +25,28 @@ from db.models import StabilityMethod as DBStabilityMethod, StabilityState as DB
 
 logger = logging.getLogger("geolux.stability")
 
+COST_PER_1K_PROMPT = float(os.environ.get("GEOLUX_LLM_COST_PROMPT", "0.003"))
+COST_PER_1K_COMPLETION = float(os.environ.get("GEOLUX_LLM_COST_COMPLETION", "0.006"))
+
+_prompt_cache: dict[str, dict] = {}
+_PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "prompts")
+
+
+def load_prompt(name: str) -> dict:
+    """Load a versioned prompt from prompts/{name}.yaml. Cached after first load."""
+    if name in _prompt_cache:
+        return _prompt_cache[name]
+    import yaml
+    path = os.path.join(_PROMPTS_DIR, f"{name}.yaml")
+    if not os.path.exists(path):
+        logger.warning("Prompt file not found: %s", path)
+        return {}
+    with open(path) as f:
+        prompt = yaml.safe_load(f)
+    _prompt_cache[name] = prompt
+    logger.info("Loaded prompt '%s' v%s", name, prompt.get("version", "?"))
+    return prompt
+
 
 class CircuitBreaker:
     """Circuit breaker for LLM calls. Opens after consecutive failures, auto-resets after cooldown."""
@@ -82,6 +104,14 @@ class StabilityAwareLLMClient:
         self.stability_threshold = stability_threshold
         self.stability_method = stability_method
 
+    def _get_threshold(self, endpoint: str) -> float:
+        """Get per-endpoint stability threshold, falling back to global."""
+        try:
+            from api.routers._shared import STABILITY_THRESHOLDS
+            return STABILITY_THRESHOLDS.get(endpoint, self.stability_threshold)
+        except ImportError:
+            return self.stability_threshold
+
     def call(
         self,
         endpoint: str,
@@ -132,8 +162,9 @@ class StabilityAwareLLMClient:
             stability_score = compute_stability_score(logprobs_data, self.stability_method)
 
             is_correct = outcome_correct if outcome_correct is not None else True
+            threshold = self._get_threshold(endpoint)
             stability_state = determine_stability_state(
-                stability_score, is_correct, self.stability_threshold
+                stability_score, is_correct, threshold
             )
 
             latency_ms = int((time.time() - start) * 1000)

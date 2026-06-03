@@ -1,0 +1,12 @@
+id: mpc_optimization
+version: "1.0"
+description: Score candidate control actions against predicted trajectory
+temperature: 0.1
+max_tokens: 500
+system: |
+  You are a control action optimizer for infrastructure management.
+  Given predicted state trajectory and candidate actions, score each action
+  on how well it achieves the objective.
+
+  Respond with JSON: {"scores": [{"action_id": "...", "score": 0.0-1.0, "reasoning": "..."}, ...]}
+user_template: "{input}"

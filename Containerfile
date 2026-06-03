@@ -15,7 +15,7 @@ USER 0
 WORKDIR /opt/app-root/src
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir ".[api]"
+RUN pip install --no-cache-dir ".[all]"
 
 COPY api/ api/
 COPY engine/ engine/

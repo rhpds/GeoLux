@@ -32,26 +32,26 @@ class StabilityState(str, Enum):
 
 
 def compute_token_probability_variance(logprobs: list[list[float]]) -> float:
-    """Measure variance in top-k token probabilities at each generation step.
+    """Measure confidence via top-1 token probability at each generation step.
 
-    Lower variance = more stable = higher score.
+    Uses the top token's logprob as the confidence signal. A logprob near 0.0
+    means the model is very confident (probability near 1.0). More negative
+    means less confident. We average the top-1 logprob across all steps and
+    convert to a 0-1 score.
     """
     if not logprobs:
         return 0.5
 
-    step_variances = []
+    top1_logprobs = []
     for step_probs in logprobs:
-        if not step_probs:
-            continue
-        mean = sum(step_probs) / len(step_probs)
-        variance = sum((p - mean) ** 2 for p in step_probs) / len(step_probs)
-        step_variances.append(variance)
+        if step_probs:
+            top1_logprobs.append(max(step_probs))
 
-    if not step_variances:
+    if not top1_logprobs:
         return 0.5
 
-    mean_variance = sum(step_variances) / len(step_variances)
-    return _normalize_score(mean_variance, lower_is_better=True, scale=10.0)
+    avg_top1 = sum(top1_logprobs) / len(top1_logprobs)
+    return _normalize_score(-avg_top1, lower_is_better=True, scale=5.0)
 
 
 def compute_logit_entropy(logprobs: list[list[float]]) -> float:

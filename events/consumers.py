@@ -130,6 +130,10 @@ def create_default_consumer_manager() -> KafkaConsumerManager:
         get_topic_name("mpc.action.recommended"),
         _handle_mpc_action_recommended,
     )
+    manager.register_handler(
+        get_topic_name("tarsy.investigation.completed"),
+        _handle_tarsy_investigation_completed,
+    )
 
     return manager
 
@@ -156,3 +160,76 @@ def _handle_mpc_action_recommended(message: dict):
     """Process MPC action recommendations — feed to action execution layer."""
     payload = message.get("payload", {})
     logger.info("MPC action recommended: %s", payload.get("cycle_id", "unknown"))
+
+
+def _handle_tarsy_investigation_completed(message: dict):
+    """Process TARSy investigation results through the governance pipeline.
+
+    Routes completed investigations through the hypothesis engine for
+    stability-gated validation before any recommended actions can proceed.
+    """
+    payload = message.get("payload", {})
+    trace_id = message.get("trace_id", payload.get("trace_id", ""))
+    source = payload.get("source", "unknown")
+    status = payload.get("status", "")
+
+    if status != "completed":
+        logger.info("TARSy investigation %s: status=%s, skipping governance",
+                     payload.get("tarsy_session_id", ""), status)
+        return
+
+    logger.info("TARSy investigation completed: session=%s source=%s trace=%s",
+                 payload.get("tarsy_session_id"), source, trace_id)
+
+    # Build evidence bundle for hypothesis engine
+    evidence_bundle = {
+        "bundle_id": f"tarsy-{payload.get('tarsy_session_id', '')}",
+        "source": "tarsy",
+        "trace_id": trace_id,
+        "evidence_fields": {
+            "root_causes": payload.get("root_causes", []),
+            "confidence": _extract_max_confidence(payload.get("root_causes", [])),
+            "recommended_actions": payload.get("recommended_actions", []),
+            "executive_summary": payload.get("executive_summary", ""),
+            "investigation_gaps": payload.get("investigation_gaps", []),
+            "originating_source": source,
+            "originator_id": payload.get("originator_id", ""),
+            "score": payload.get("score"),
+        },
+    }
+
+    # Feed to hypothesis engine — stability gate applies automatically
+    try:
+        from db.database import get_db
+        from engine.hypothesis import generate_hypotheses
+        db = next(get_db())
+        result = generate_hypotheses(evidence_bundle, db)
+        logger.info("Hypotheses generated from TARSy: %d (gated=%s)",
+                     result.get("total", 0), result.get("gated", False))
+        db.close()
+    except Exception as e:
+        logger.warning("Hypothesis generation from TARSy result failed: %s", e)
+
+    # Publish governance audit event
+    try:
+        from events.publishers import publish_audit_event
+        publish_audit_event({
+            "source_component": "tarsy-governance",
+            "event_type": "tarsy.investigation.governed",
+            "tarsy_session_id": payload.get("tarsy_session_id"),
+            "trace_id": trace_id,
+            "source": source,
+            "originator_id": payload.get("originator_id", ""),
+            "actions_count": len(payload.get("recommended_actions", [])),
+            "root_causes_count": len(payload.get("root_causes", [])),
+        })
+    except Exception as e:
+        logger.debug("Audit event publish failed (non-critical): %s", e)
+
+
+def _extract_max_confidence(root_causes: list) -> float:
+    confidence_map = {"high": 0.9, "medium": 0.6, "low": 0.3}
+    if not root_causes:
+        return 0.0
+    scores = [confidence_map.get(rc.get("confidence", "low"), 0.3) for rc in root_causes]
+    return max(scores)

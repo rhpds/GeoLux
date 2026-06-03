@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db import repository
-from api.routers._shared import MPC_DEFAULT_HORIZON, MPC_MAX_HORIZON
+from api.routers._shared import MPC_DEFAULT_HORIZON, MPC_MAX_HORIZON, limiter
 
 router = APIRouter(prefix="/mpc", tags=["llm-mpc"])
 
@@ -40,7 +40,9 @@ class MPCPlanResponse(BaseModel):
 
 
 @router.post("/plan", status_code=201)
+@limiter.limit("10/minute")
 def create_mpc_plan(
+    request: Request,
     body: MPCPlanRequest,
     db: Session = Depends(get_db),
 ):

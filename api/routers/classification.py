@@ -8,12 +8,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db import repository
+from api.routers._shared import limiter
 
 router = APIRouter(prefix="/classify", tags=["classification"])
 
@@ -44,7 +45,9 @@ class ClassifyResponse(BaseModel):
 
 
 @router.post("", status_code=201)
+@limiter.limit("10/minute")
 def classify_evidence(
+    request: Request,
     body: ClassifyRequest,
     db: Session = Depends(get_db),
 ):

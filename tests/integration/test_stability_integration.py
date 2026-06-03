@@ -107,8 +107,8 @@ class TestStabilityAwareLLMClientIntegration:
 
     @patch("litellm.completion")
     def test_unstable_call_persists_unstable_record(self, mock_litellm, integration_db):
-        # Spread logprobs = high variance = low stability score
-        unstable_logprobs = [[-0.01, -0.5, -1.0, -3.0, -8.0]] * 10
+        # Top-1 token is uncertain (logprob -3.0) = low stability score
+        unstable_logprobs = [[-3.0, -3.5, -4.0, -5.0, -6.0]] * 10
         mock_litellm.return_value = self._make_mock_response(
             content="uncertain result",
             logprobs_data=unstable_logprobs,
@@ -208,10 +208,10 @@ class TestStabilityAwareLLMClientIntegration:
     @patch("litellm.completion")
     def test_stability_state_four_quadrants(self, mock_litellm, integration_db):
         """Verify all four stability states can be produced and persisted."""
-        # Tight logprobs = low variance = high score (~1.0)
-        stable_logprobs = [[-0.05, -0.06, -0.07, -0.08, -0.09]] * 10
-        # Spread logprobs = high variance = low score (~0.14)
-        unstable_logprobs = [[-0.01, -0.5, -1.0, -3.0, -8.0]] * 10
+        # Confident top-1 token = high score
+        stable_logprobs = [[-0.05, -5.0, -10.0, -15.0, -18.0]] * 10
+        # Uncertain top-1 token = low score
+        unstable_logprobs = [[-3.0, -3.5, -4.0, -5.0, -6.0]] * 10
 
         client = StabilityAwareLLMClient(
             base_url="http://mock", api_key="test", model="test-model",

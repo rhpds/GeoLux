@@ -17,7 +17,7 @@ const queryClient = new QueryClient({
 });
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Overview' },
+  { to: '/', label: 'Overview', end: true },
   { to: '/hypotheses', label: 'Hypotheses' },
   { to: '/classification', label: 'Classification' },
   { to: '/mpc', label: 'MPC' },
@@ -27,38 +27,41 @@ const NAV_ITEMS = [
   { to: '/admin', label: 'Admin' },
 ];
 
-function navClass({ isActive }: { isActive: boolean }) {
-  const base = 'px-3 py-2 text-sm font-medium transition-colors';
-  return isActive
-    ? `${base} text-white border-b-2 border-brand-primary`
-    : `${base} text-brand-muted hover:text-white`;
-}
-
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ErrorBoundary>
-          <div className="min-h-screen bg-brand-dark flex flex-col">
-            <header className="bg-brand-dark border-b border-brand-border">
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-brand-dark)' }}>
+            <header style={{ backgroundColor: 'var(--color-brand-dark)' }} className="text-white">
               <div className="max-w-7xl mx-auto px-6 lg:px-8">
-                <div className="flex items-center justify-between h-14">
-                  <div className="flex items-center gap-4">
-                    <h1 className="text-lg font-bold text-white" style={{ fontFamily: 'Red Hat Display' }}>
-                      GeoLux
-                    </h1>
+                <div className="flex items-center h-14 gap-6">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <img src="/logos/redhat.svg" alt="Red Hat" style={{ height: '28px' }} />
+                    <span className="text-brand-muted">|</span>
+                    <span className="text-lg font-semibold tracking-tight" style={{ fontFamily: 'Red Hat Display, sans-serif' }}>GeoLux</span>
+                  </div>
+                  <nav className="flex gap-1">
+                    {NAV_ITEMS.map(({ to, label, end }) => (
+                      <NavLink key={to} to={to} end={end}
+                        className={({ isActive }) =>
+                          `px-3 py-1.5 rounded text-sm font-medium transition ${isActive ? 'bg-white/15 text-white' : 'text-brand-muted hover:text-white hover:bg-white/10'}`
+                        }>
+                        {label}
+                      </NavLink>
+                    ))}
+                  </nav>
+                  <div className="ml-auto">
                     <ModeIndicator />
                   </div>
                 </div>
-                <nav className="flex gap-1 -mb-px">
-                  {NAV_ITEMS.map(({ to, label }) => (
-                    <NavLink key={to} to={to} end={to === '/'} className={navClass}>
-                      {label}
-                    </NavLink>
-                  ))}
-                </nav>
               </div>
             </header>
+
+            <div className="h-0.5 flex">
+              <div className="flex-1" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
+              <div className="flex-1" style={{ backgroundColor: 'var(--color-brand-secondary)' }} />
+            </div>
 
             <main className="flex-1">
               <Routes>
@@ -73,15 +76,17 @@ export default function App() {
               </Routes>
             </main>
 
-            <footer className="border-t border-brand-border py-4">
+            <footer style={{ backgroundColor: 'var(--color-brand-dark)' }} className="border-t border-brand-border text-brand-muted text-sm py-5">
               <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center justify-between">
-                <span className="text-xs text-brand-muted">GeoLux — Governed Agentic Inference Platform</span>
-                <span className="text-xs text-brand-muted">Red Hat Intel AI Platform</span>
+                <div className="flex items-center gap-3">
+                  <img src="/logos/redhat.svg" alt="" style={{ height: '16px', opacity: 0.6 }} />
+                </div>
+                <span>Governed Agentic Inference on Red Hat OpenShift</span>
               </div>
             </footer>
           </div>
-        </ErrorBoundary>
-      </BrowserRouter>
-    </QueryClientProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,5 +1,9 @@
 # GeoLux Integration Map
 
+**Production:** https://geolux.apps.ocpv-infra01.dal12.infra.demo.redhat.com
+**Namespace:** geolux (OpenShift, infra01 cluster)
+**Database:** shared with Stargate (stargate-postgres.stargate.svc:5432, glx_ tables)
+
 ## System Overview
 
 ```

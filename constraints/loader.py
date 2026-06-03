@@ -15,7 +15,7 @@ import yaml
 from sqlalchemy.orm import Session
 
 from db import repository
-from db.models import ConstraintDefinitionRecord
+from db.models import ConstraintDefinitionRecord, AssertionType, Severity
 
 logger = logging.getLogger("geolux.constraints")
 

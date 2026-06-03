@@ -70,6 +70,21 @@ The probability manifold of an LLM has measurable geometric shape. Stable output
 **Files:** `scenarios/*.py`, `engine/replay.py`, `api/routers/scenarios.py`
 **Scenarios:** healthy-baseline, node-failure, instability-event.
 **Modes:** live (real data), synthetic (generated), replay (recorded events).
+**Replay:** Record real Kafka events, replay at configurable speed, pause/inspect, ground truth comparison.
+
+### 8. Action Execution Layer
+**Purpose:** Execute MPC-recommended actions with approval workflow and audit trail.
+**Files:** `engine/action_executor.py`
+**Gates:** Approval, confidence threshold, dry-run mode, live-mode-only.
+**Audit:** Before/after state capture, action.executed Kafka event.
+
+### 9. Supporting Infrastructure
+- **Circuit breaker** (`api/stability/wrapper.py`): Opens after 5 LLM failures, 60s cooldown, auto-reset.
+- **Prometheus metrics** (`api/metrics.py`): 12 metrics (HTTP, LLM, hypotheses, classifications, MPC, routing, circuit breaker). Endpoint: `GET /metrics`.
+- **Kafka consumers** (`events/consumers.py`): Consumer framework with topic handlers and threading.
+- **MPC objectives** (`engine/objectives.py`): Per-cluster versioned objective functions with audit trail.
+- **Data retention** (`engine/retention.py`): Background job deleting records past retention (30d-365d per table).
+- **Security** (`api/security.py`): SSO/OIDC, API key auth, input sanitization, audit hash chain.
 
 ---
 
@@ -149,8 +164,11 @@ All tables prefixed `glx_` to avoid collision with Stargate tables.
 | `/scenarios` | Synthetic Client | GET /list, POST /run, POST /replay/start, /replay/pause |
 | `/health` | System | GET /health |
 | `/mode` | System | GET /mode, PUT /mode |
+| `/metrics` | Observability | GET /metrics (Prometheus) |
 
-All specs in `contracts/openapi/*.yaml` (OpenAPI 3.1).
+All specs in `contracts/openapi/*.yaml` (OpenAPI 3.1) and `contracts/asyncapi/*.yaml` (AsyncAPI 2.6).
+
+**Production deployment:** https://geolux.apps.ocpv-infra01.dal12.infra.demo.redhat.com
 
 ---
 
@@ -158,9 +176,10 @@ All specs in `contracts/openapi/*.yaml` (OpenAPI 3.1).
 
 | Category | Count | Framework |
 |----------|-------|-----------|
-| Unit tests | ~100 | pytest |
-| Integration tests | ~100 | pytest + SQLite |
+| Unit tests | 156 | pytest |
+| Integration tests | 105 | pytest + SQLite |
+| Property tests | 40 | Hypothesis |
+| Contract tests | 35 | pytest (CDD) |
 | BDD scenarios | 41 | Behave |
-| Property tests | ~30 | Hypothesis |
-| Contract tests | ~40 | pytest (CDD) |
-| **Total** | **~322** | **0 failures** |
+| Frontend tests | 3 | Vitest |
+| **Total** | **380** | **0 failures** |

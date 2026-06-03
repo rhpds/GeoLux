@@ -33,6 +33,15 @@ Each hypothesis must have:
   Each condition has: field (evidence field name), operator (eq/gt/lt/gte/lte/contains/matches), value
 - confidence_score: your confidence in this hypothesis (0.0 to 1.0)
 
+The evidence may include cross-system context under the "cross_system" key:
+- stargate: recent rubric evaluation results, failure classes, pass rates
+- deepfield: cluster signal patterns, RCA categories, incident history
+- launchpad: provisioning intelligence, routing patterns
+
+Use cross-system data to generate hypotheses that span system boundaries.
+For example: "If StarGate shows repeated deployment-ready failures AND DeepField
+shows recurring pod_crashloop signals, the root cause may be systemic."
+
 Respond ONLY with a JSON array of hypothesis objects. No other text."""
 
 
@@ -52,6 +61,15 @@ def generate_hypotheses(
 
     bundle_id = evidence_bundle.get("bundle_id", str(uuid.uuid4()))
     evidence_fields = evidence_bundle.get("evidence_fields", evidence_bundle)
+
+    # Enrich with cross-system data
+    try:
+        from engine.evidence_enricher import EvidenceEnricher
+        enricher = EvidenceEnricher(db)
+        evidence_bundle = enricher.enrich(evidence_bundle)
+        evidence_fields = evidence_bundle.get("evidence_fields", evidence_fields)
+    except Exception as e:
+        logger.debug("Evidence enrichment failed (non-critical): %s", e)
 
     audit_record = repository.create_audit_event(
         db,

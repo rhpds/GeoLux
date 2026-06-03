@@ -15,7 +15,7 @@ spec:
       labels:
         app: geolux-migrate
     spec:
-      serviceAccountName: {{ .Values.serviceAccount.name }}
+      serviceAccountName: default
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true

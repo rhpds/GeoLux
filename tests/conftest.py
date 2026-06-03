@@ -7,22 +7,32 @@ with dependency override.
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from db.database import Base, set_engine, get_db
 
-test_engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+test_engine = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 set_engine(test_engine)
 TestSession = sessionmaker(bind=test_engine)
 
 
 @pytest.fixture(autouse=True)
-def _reset_circuit_breaker():
-    """Reset the LLM circuit breaker between tests to prevent test interaction."""
+def _reset_shared_state():
+    """Reset singletons and shared state between tests."""
     from api.stability.wrapper import _circuit_breaker
     _circuit_breaker.reset()
+    import api.routers._shared as _shared
+    _shared.GEOLUX_MODE = "live"
+    _shared.STABILITY_THRESHOLD = 0.7
     yield
     _circuit_breaker.reset()
+    _shared.GEOLUX_MODE = "live"
+    _shared.STABILITY_THRESHOLD = 0.7
 
 
 @pytest.fixture

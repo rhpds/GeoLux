@@ -6,12 +6,13 @@ substrate as a policy decision.
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db import repository
+from api.routers._shared import limiter
 
 router = APIRouter(prefix="/deepfield", tags=["deepfield"])
 
@@ -39,7 +40,9 @@ class RouteResponse(BaseModel):
 
 
 @router.post("/route", status_code=201)
+@limiter.limit("20/minute")
 def route_workload(
+    request: Request,
     body: RouteRequest,
     db: Session = Depends(get_db),
 ):

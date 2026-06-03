@@ -80,6 +80,22 @@ TOPICS = {
         "retention_ms": 7 * 24 * 60 * 60 * 1000,
         "partitions": 1,
     },
+    "tarsy.investigation.requested": {
+        "topic": "tarsy-investigation-requested",
+        "producer": "deepfield|stargate|launchpad",
+        "consumers": ["tarsy-kafka-adapter"],
+        "description": "Investigation requests for TARSy intelligence layer",
+        "retention_ms": 7 * 24 * 60 * 60 * 1000,
+        "partitions": 3,
+    },
+    "tarsy.investigation.completed": {
+        "topic": "tarsy-investigation-completed",
+        "producer": "tarsy-kafka-adapter",
+        "consumers": ["geolux-governance", "stargate-dashboard", "deepfield"],
+        "description": "Completed TARSy investigation results for governance validation",
+        "retention_ms": 30 * 24 * 60 * 60 * 1000,
+        "partitions": 3,
+    },
 }
 
 

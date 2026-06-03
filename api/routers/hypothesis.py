@@ -8,12 +8,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db import repository
+from api.routers._shared import limiter
 
 router = APIRouter(prefix="/hypotheses", tags=["hypothesis-engine"])
 
@@ -49,7 +50,9 @@ class ValidationRequest(BaseModel):
 
 
 @router.post("/generate", status_code=201)
+@limiter.limit("10/minute")
 def generate_hypotheses(
+    request: Request,
     bundle: EvidenceBundle,
     db: Session = Depends(get_db),
 ):
@@ -58,7 +61,7 @@ def generate_hypotheses(
     return result
 
 
-@router.get("/queue")
+@router.get("/queue", response_model=HypothesisQueueResponse)
 def get_hypothesis_queue(
     evidence_bundle_id: Optional[str] = None,
     limit: int = 50,
@@ -83,7 +86,7 @@ def get_hypothesis_queue(
     )
 
 
-@router.get("/{hypothesis_id}")
+@router.get("/{hypothesis_id}", response_model=HypothesisResponse)
 def get_hypothesis(
     hypothesis_id: str,
     db: Session = Depends(get_db),
@@ -104,7 +107,9 @@ def get_hypothesis(
 
 
 @router.post("/{hypothesis_id}/validate")
+@limiter.limit("30/minute")
 def validate_hypothesis(
+    request: Request,
     hypothesis_id: str,
     body: ValidationRequest,
     db: Session = Depends(get_db),

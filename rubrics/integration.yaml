@@ -1,8 +1,15 @@
 id: integration
-version: v0.1.0
+version: v0.2.0
 component: end-to-end-integration
 description: >
   Final EDD rubric matrix for end-to-end integration and deployment readiness.
+  Updated post-deployment to infra01.
+
+deployment:
+  url: https://geolux.apps.ocpv-infra01.dal12.infra.demo.redhat.com
+  namespace: geolux
+  cluster: ocpv-infra01.dal12.infra.demo.redhat.com
+  mode: synthetic
 
 evaluation_dimensions:
   end_to_end:
@@ -12,7 +19,9 @@ evaluation_dimensions:
       - Healthy cluster pipeline produces passing classification + hypotheses
       - Failing cluster pipeline produces fail classification + hypotheses
       - All audit events present in trail
+      - All 15 API endpoints returning 200 on production
     current_state: green
+    test_count: 5
 
   all_components:
     description: Every component passes its individual gate
@@ -25,13 +34,35 @@ evaluation_dimensions:
       - Phase 6 Launchpad Intelligence: PASSED
       - Phase 7 Synthetic Client + Replay: PASSED
       - Phase 8 Dashboard Extensions: PASSED
+      - Gap closure: action executor, circuit breaker, metrics, consumers, replay, retention, objectives
+    current_state: green
+
+  security:
+    description: Security hardening complete
+    pass_criteria:
+      - SSO/OIDC integration (api/security.py)
+      - Input sanitization (XSS, SQL injection patterns)
+      - Audit hash chain (tamper detection)
+      - Circuit breaker on LLM calls
+      - Security headers (CSP, HSTS, etc.)
+      - Pre-commit secret detection
+    current_state: green
+    test_count: 28
+
+  observability:
+    description: Prometheus metrics and monitoring
+    pass_criteria:
+      - 12 Prometheus metrics defined
+      - /metrics endpoint serving
+      - HTTP request metrics, LLM call metrics, component metrics
     current_state: green
 
   helm:
     description: Helm charts render and deploy
     pass_criteria:
-      - Chart.yaml, values.yaml, templates present
-      - helm template renders without errors
+      - 10 templates (deployment, service, configmap, serviceaccount, secrets, route, network-policy, hpa, pdb, migration-job)
+      - 3 values files (default, dev, prod)
+      - Deployed to infra01 successfully
     current_state: green
 
   modes:
@@ -42,32 +73,36 @@ evaluation_dimensions:
       - Replay mode guards replay-only endpoints
     current_state: green
 
+  documentation:
+    description: All documentation complete and current
+    pass_criteria:
+      - README.md (project overview)
+      - ARCHITECTURE.md (full technical spec)
+      - SECURITY.md (auth, OWASP, pen test vectors)
+      - PERSISTENCE.md (column-level schema, PII, retention)
+      - INTEGRATION_MAP.md (system diagram, data flows)
+      - KNOWN_GAPS.md (deferred items, resolved gaps)
+      - docs/SBE.md (concrete examples)
+      - 7 operational runbooks
+      - 7 OpenAPI specs + 9 AsyncAPI specs
+      - 8 EDD rubric matrices
+    current_state: green
+
   existing_stargate:
     description: All existing Stargate functionality unchanged
     pass_criteria:
       - GeoLux tables prefixed with glx_ (no collision)
       - No modifications to Stargate code
-      - Additive extensions only
-    current_state: green
-
-  runbooks:
-    description: All 7 operational runbooks written
-    pass_criteria:
-      - geometric_instability_event.md
-      - hypothesis_queue_exhausted.md
-      - mpc_horizon_collapse.md
-      - deepfield_routing_fallback.md
-      - classification_unclassifiable.md
-      - llm_unavailable.md
-      - nano_agent_promotion_failure.md
-    current_state: green
-
-  integration_map:
-    description: Complete system view documented
-    pass_criteria:
-      - INTEGRATION_MAP.md covers all components, Kafka flows, REST dependencies, DB tables, data flow, modes, external integrations
+      - Cross-namespace NetworkPolicy for DB access
     current_state: green
 
 promotion_gate:
-  description: All dimensions stable green — PRODUCTION READY
+  description: All dimensions stable green — DEPLOYED TO PRODUCTION
   status: PASSED
+
+test_totals:
+  pytest: 336
+  bdd_scenarios: 41
+  frontend_vitest: 3
+  total: 380
+  failures: 0

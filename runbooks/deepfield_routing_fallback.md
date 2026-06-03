@@ -1,88 +1,82 @@
 # Runbook: Deepfield Routing Fallback
 
 ## Trigger
-Target substrate tier is unavailable or unhealthy, forcing the Deepfield Router
-to fall back to a lower-priority tier for workload placement.
+Target substrate is unavailable, forcing the Deepfield Router to fall back
+to a lower tier or CPU for workload placement.
 
 ## Severity
-**Medium** — Workloads continue to execute on a fallback tier but may
-experience degraded throughput or higher latency.
+**Medium** -- Workloads continue on fallback substrate but may experience
+degraded throughput or higher latency.
 
 ## Symptoms
-- `deepfield.routing.fallback` audit events in Kafka
-- RouteResponse records showing `fallback_used: true`
-- NanoObs traces with elevated latency on fallback substrate
-- Dashboard Deepfield tab showing amber/red health for one or more tiers
-- Increased `routing.fallback.count` metric in monitoring
+- Routing decisions showing `policy_rule_applied` starting with `fallback_from_`
+- Audit events with `deepfield.routing.started` but tier different from LLM classification
+- Dashboard Hardware tab showing routing to unexpected tiers
+- Substrate environment variables (`GEOLUX_GAUDI_URL`, `GEOLUX_XEON6_URL`) empty or unreachable
 
 ## Investigation Steps
 
-1. **Check substrate health**
+1. **Check substrate availability**
    ```bash
-   curl -s https://<gaudi-endpoint>/healthz
-   curl -s https://<xeon6-endpoint>/healthz
+   curl -s $GEOLUX_GAUDI_URL/health
+   curl -s $GEOLUX_XEON6_URL/health
    ```
 
 2. **Check recent routing decisions for fallback activity**
    ```sql
-   SELECT routing_id, workload_id, selected_tier, fallback_used,
-          fallback_chain, geometric_stability_score, created_at
-   FROM glx_deepfield_routing_decisions
-   WHERE fallback_used = true
+   SELECT routing_id, workload_id, tier_assignment, substrate,
+          policy_rule_applied, confidence_score, created_at
+   FROM glx_routing_decisions
+   WHERE policy_rule_applied LIKE 'fallback_%'
    ORDER BY created_at DESC LIMIT 20;
    ```
 
-3. **Check Gaudi substrate health**
-   ```sql
-   SELECT tier_name, healthy, capacity_remaining_pct, updated_at
-   FROM glx_deepfield_tiers
-   WHERE substrate_type = 'gaudi'
-   ORDER BY priority;
+3. **Check substrate URL configuration**
+   ```bash
+   oc get configmap geolux-config -o yaml | grep -i gaudi
+   oc get configmap geolux-config -o yaml | grep -i xeon
    ```
 
-4. **Check Xeon6 substrate health**
+4. **Check routing distribution**
    ```sql
-   SELECT tier_name, healthy, capacity_remaining_pct, updated_at
-   FROM glx_deepfield_tiers
-   WHERE substrate_type = 'xeon6'
-   ORDER BY priority;
+   SELECT tier_assignment, substrate, COUNT(*)
+   FROM glx_routing_decisions
+   WHERE created_at > NOW() - INTERVAL '1 hour'
+   GROUP BY tier_assignment, substrate;
    ```
 
 5. **Identify root cause**
    - Is the substrate endpoint unreachable (network/DNS)?
-   - Is the substrate overloaded (capacity_remaining_pct near 0)?
-   - Has a recent deployment changed endpoint configuration?
-   - Are NanoObs traces showing timeouts on the primary tier?
+   - Are environment variables set correctly?
+   - Has a deployment changed endpoint configuration?
 
 ## Remediation
 
 ### Automatic (already in effect)
-- Router falls back to the next-priority tier in the tier chain
-- Fallback chain is recorded in RouteResponse for audit
-- NanoObs continues tracing on the fallback substrate
-- `deepfield.routing.fallback` event published to Kafka
+- Router falls back: macro→micro→nano (TIER_ESCALATION chain)
+- If escalated tier also unavailable, falls back to nano/CPU
+- CPU substrate is always available (no external dependency)
+- Routing decision logged with `fallback_from_*` policy rule
+- Audit event published to Kafka
 
 ### Manual
-- **Verify substrate URLs**: confirm endpoints in tier definitions match live infrastructure
-- **Restart unhealthy substrate**: if the substrate process is down, restart the service
-- **Scale substrate capacity**: if capacity is exhausted, add nodes or increase quotas
-- **Manual tier override**: force routing to a specific tier via the `preferred_tier` field
+- **Verify substrate URLs**: check `GEOLUX_GAUDI_URL` and `GEOLUX_XEON6_URL` in configmap
+- **Restart unhealthy substrate**: if the inference server is down, restart it
+- **Manual override**: route to specific tier with reason
   ```bash
   curl -X POST /deepfield/route \
-    -d '{"workload_id":"...","workload_type":"inference","compute_profile":{...},"preferred_tier":"xeon6-backup"}'
+    -H "Content-Type: application/json" \
+    -d '{"workload_id":"...","workload_description":{...},"override_tier":"micro","override_reason":"gaudi maintenance","override_operator":"admin@redhat.com"}'
   ```
-- **Temporarily disable unhealthy tier**: mark the tier as unhealthy to prevent retry churn
-  ```sql
-  UPDATE glx_deepfield_tiers SET healthy = false WHERE tier_name = '<tier>';
-  ```
+- **Suspend adaptive routing**: if LLM classification is also unstable, the router
+  automatically falls back to static rule-based classification
 
 ### Recovery
-- Router automatically re-includes a tier when its health check returns healthy
-- Fallback routing ceases once the primary tier recovers
-- NanoObs trace latency should return to baseline after recovery
+- Set the substrate URL environment variable and restart the pod
+- Router will automatically use the substrate once available
+- Verify with: `curl $GEOLUX_GAUDI_URL/health`
 
 ## Escalation
 - Fallback active > 30 minutes: page on-call SRE
-- All tiers unhealthy (503 responses): escalate to infrastructure team immediately
+- All substrates unavailable (only CPU): escalate to infrastructure team
 - Fallback correlates with substrate deployment: notify platform ops
-- Geometric stability degradation during fallback: notify ML ops

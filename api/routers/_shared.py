@@ -1,6 +1,8 @@
 """Shared state, configuration, and dependencies for GeoLux routers."""
 
 import os
+import threading
+import time
 from typing import Optional
 
 from fastapi import Depends, HTTPException
@@ -16,6 +18,13 @@ VALID_MODES = ("live", "synthetic", "replay")
 
 STABILITY_THRESHOLD = float(os.environ.get("GEOLUX_STABILITY_THRESHOLD", "0.7"))
 STABILITY_METHOD = os.environ.get("GEOLUX_STABILITY_METHOD", "token_probability")
+STABILITY_THRESHOLDS = {
+    "hypothesis_generation": float(os.environ.get("GEOLUX_STABILITY_THRESHOLD_HYPOTHESIS", str(STABILITY_THRESHOLD))),
+    "semantic_classification": float(os.environ.get("GEOLUX_STABILITY_THRESHOLD_CLASSIFICATION", str(STABILITY_THRESHOLD))),
+    "mpc_prediction": float(os.environ.get("GEOLUX_STABILITY_THRESHOLD_MPC", str(STABILITY_THRESHOLD))),
+    "mpc_optimization": float(os.environ.get("GEOLUX_STABILITY_THRESHOLD_MPC", str(STABILITY_THRESHOLD))),
+    "deepfield_classification": float(os.environ.get("GEOLUX_STABILITY_THRESHOLD_DEEPFIELD", str(STABILITY_THRESHOLD))),
+}
 
 MPC_DEFAULT_HORIZON = int(os.environ.get("GEOLUX_MPC_HORIZON", "2"))
 MPC_MAX_HORIZON = int(os.environ.get("GEOLUX_MPC_MAX_HORIZON", "5"))
@@ -47,3 +56,33 @@ def require_admin(request):
     if proxy_user:
         return proxy_user
     raise HTTPException(status_code=401, detail="Admin access required")
+
+
+# ── Shutdown Event ────────────────────────────────────────────────────
+
+_shutdown_event = threading.Event()
+
+# ── TTL Cache ─────────────────────────────────────────────────────────
+
+_constraint_cache: dict = {"data": None, "ts": 0.0}
+CONSTRAINT_CACHE_TTL = 300
+
+_view_cache: dict = {"stability": {}, "hypothesis": {}, "classification": {}, "ts": 0.0}
+VIEW_CACHE_TTL = 60
+
+
+def get_cached_constraints(db):
+    """Get constraint definitions with TTL cache."""
+    now = time.time()
+    if _constraint_cache["data"] is not None and now - _constraint_cache["ts"] < CONSTRAINT_CACHE_TTL:
+        return _constraint_cache["data"]
+    from db import repository
+    data = repository.get_constraint_definitions(db)
+    _constraint_cache["data"] = data
+    _constraint_cache["ts"] = now
+    return data
+
+
+def invalidate_constraint_cache():
+    _constraint_cache["data"] = None
+    _constraint_cache["ts"] = 0.0

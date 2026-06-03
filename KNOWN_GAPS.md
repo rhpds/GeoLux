@@ -109,3 +109,25 @@ All GeoLux tables (`glx_*`) live in the shared Stargate PostgreSQL instance. Fut
 - Automatic failover for the primary instance
 - Connection pooling (PgBouncer) for high-concurrency MPC and classification workloads
 - Evaluate whether audit events (`glx_audit_events`, 365-day retention) should move to a separate instance to avoid bloating the primary
+
+---
+
+## Resolved Gaps
+
+The following were identified as gaps during development and have been closed:
+
+| Gap | Resolution |
+|-----|-----------|
+| AsyncAPI specs | 9 AsyncAPI 2.6 specs in `contracts/asyncapi/` |
+| Kafka consumers | Consumer framework in `events/consumers.py` |
+| Action execution layer | `engine/action_executor.py` with gates and audit |
+| Kafka replay engine | Full implementation in `engine/replay.py` |
+| Circuit breaker | `CircuitBreaker` class in `api/stability/wrapper.py` |
+| Prometheus metrics | 12 metrics in `api/metrics.py`, endpoint at `/metrics` |
+| Data retention job | `engine/retention.py` with per-table policies |
+| MPC objectives | Versioned per-cluster objectives in `engine/objectives.py` |
+| NanoObs → THE feedback | Drift detection feeds hypothesis generation |
+| SBE documentation | `docs/SBE.md` with concrete examples |
+| Pre-commit hooks | `.pre-commit-config.yaml` with secret detection |
+| Playwright config | `frontend/playwright.config.ts` |
+| SQLAlchemy enum fix | `values_callable` on all Enum columns for PostgreSQL compatibility |

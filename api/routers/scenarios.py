@@ -2,12 +2,12 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from db.database import get_db
-from api.routers._shared import GEOLUX_MODE
+from api.routers._shared import GEOLUX_MODE, limiter
 
 router = APIRouter(prefix="/scenarios", tags=["synthetic-client"])
 
@@ -31,7 +31,9 @@ def list_scenarios():
 
 
 @router.post("/run", status_code=201)
+@limiter.limit("5/minute")
 def run_scenario(
+    request: Request,
     body: ScenarioRunRequest,
     db: Session = Depends(get_db),
 ):
@@ -48,7 +50,8 @@ def run_scenario(
 
 
 @router.post("/replay/start", status_code=201)
-def start_replay(body: ReplayStartRequest):
+@limiter.limit("5/minute")
+def start_replay(request: Request, body: ReplayStartRequest):
     if GEOLUX_MODE != "replay":
         raise HTTPException(status_code=409, detail="Replay only available in GEOLUX_MODE=replay")
     from engine.replay import KafkaReplayEngine
