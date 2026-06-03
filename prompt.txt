@@ -1184,7 +1184,7 @@ DELIVER IN THIS ORDER:
    e. Launchpad intelligence layer
    f. Geometric stability infrastructure
    g. Synthetic client and Kafka replay
-   
+
    For each component deliver in this order:
    - EDD rubric matrix
    - OpenAPI or AsyncAPI contract
