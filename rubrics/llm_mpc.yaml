@@ -1,0 +1,112 @@
+id: llm-mpc
+version: v0.1.0
+component: llm-mpc-controller
+description: >
+  EDD rubric matrix for the LLM-MPC (Model Predictive Control) controller.
+  Receding horizon with automatic stability-based adjustment.
+
+theoretical_grounding:
+  - Computational Irreducibility: short receding horizons calibrated to locally smooth dynamics
+  - Geometric State Theory: stability as automatic horizon limiter
+
+evaluation_dimensions:
+  schema:
+    description: MPC cycles table with full audit trail
+    pass_criteria:
+      - glx_mpc_cycles table with all columns
+      - Prediction trace and candidate actions stored as JSON
+      - Stability profile stored per cycle
+    current_state: green
+
+  unit_tests:
+    description: Core controller logic tests
+    pass_criteria:
+      - Horizon adjustment: stable stays, unstable shortens, sustained extends
+      - Horizon minimum=1, never exceeds max
+      - Optimize selects highest-scoring candidate
+      - Suspension triggers after threshold consecutive instabilities
+      - Suspension resets on stable score
+      - Candidate generation for scale/remediate/empty objectives
+    current_state: green
+    test_count: 16
+
+  integration_tests:
+    description: End-to-end MPC cycles with mocked LLM
+    pass_criteria:
+      - Plan cycle produces predictions and recommended action
+      - Audit trail created for cycle start and suspension
+      - Cycles persisted to DB
+      - Horizon adjusted on instability
+      - Activation gate rejects without history
+      - Activation gate passes with sufficient history
+      - Suspension after sustained instability
+      - API endpoints return correct data
+    current_state: green
+    test_count: 10
+
+  bdd_scenarios:
+    description: Behavioral specifications
+    pass_criteria:
+      - Horizon stays same, shortens, extends, never exceeds max
+      - Suspension after consecutive instabilities
+      - Candidate generation from objectives
+    current_state: green
+    scenario_count: 6
+
+  pdd_invariants:
+    description: Property-based invariants
+    pass_criteria:
+      - Horizon always between 1 and max for any stability scores
+      - Horizon adjustment is deterministic
+      - Horizon changes by at most 1 per cycle
+      - Suspension triggers at exactly the threshold count
+      - Stable score resets counter preventing suspension
+    current_state: green
+    test_count: 5
+
+  geometric_stability:
+    description: Predictions use stability-aware LLM
+    pass_criteria:
+      - StabilityAwareLLMClient used for prediction and optimization calls
+      - Stability scores stored in cycle profile
+      - Horizon auto-adjusts based on stability
+      - Sustained instability triggers suspension
+    current_state: green
+
+  kafka_events:
+    description: MPC events published
+    pass_criteria:
+      - mpc.action.recommended published after cycle
+    current_state: green
+
+  audit_trail:
+    description: All MPC operations logged
+    pass_criteria:
+      - mpc.cycle.started audit event
+      - mpc.suspended audit event when suspended
+    current_state: green
+
+  graceful_degradation:
+    description: Handles failures gracefully
+    pass_criteria:
+      - LLM failure returns empty predictions, no crash
+      - Activation gate rejection returns explicit error
+      - Suspension falls back to reactive classification
+      - All constraint violations escalated to human
+    current_state: green
+
+  contract:
+    description: OpenAPI specification
+    pass_criteria:
+      - OpenAPI 3.1 spec at contracts/openapi/mpc.yaml
+    current_state: green
+
+  documentation:
+    description: Operational runbook
+    pass_criteria:
+      - Runbook at runbooks/mpc_horizon_collapse.md
+    current_state: green
+
+promotion_gate:
+  description: All dimensions stable green
+  status: PASSED

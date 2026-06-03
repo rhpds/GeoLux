@@ -1,0 +1,318 @@
+openapi: "3.1.0"
+info:
+  title: GeoLux Synthetic Client & Scenario Replay API
+  description: Scenario-driven synthetic workload generation with replay and mode switching
+  version: "0.1.0"
+
+paths:
+  /scenarios/list:
+    get:
+      operationId: listScenarios
+      summary: List available scenario definitions
+      responses:
+        "200":
+          description: List of scenario definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScenarioDefinition"
+
+  /scenarios/run:
+    post:
+      operationId: runScenario
+      summary: Execute a scenario run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScenarioRunRequest"
+      responses:
+        "201":
+          description: Scenario run completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScenarioRunResult"
+        "400":
+          description: Invalid scenario request
+        "404":
+          description: Scenario definition not found
+
+  /scenarios/replay/start:
+    post:
+      operationId: startReplay
+      summary: Start replaying a recorded scenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplayStartRequest"
+      responses:
+        "201":
+          description: Replay started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplayStatus"
+        "400":
+          description: Invalid replay request
+        "409":
+          description: Replay already in progress
+
+  /scenarios/replay/pause:
+    post:
+      operationId: pauseReplay
+      summary: Pause a running replay session
+      responses:
+        "200":
+          description: Replay paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplayStatus"
+        "404":
+          description: No active replay session
+        "409":
+          description: Replay already paused
+
+  /mode:
+    get:
+      operationId: getMode
+      summary: Get the current operating mode
+      responses:
+        "200":
+          description: Current mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModeResponse"
+    put:
+      operationId: updateMode
+      summary: Switch operating mode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModeUpdate"
+      responses:
+        "200":
+          description: Mode updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModeResponse"
+        "400":
+          description: Invalid mode transition
+
+components:
+  schemas:
+    ScenarioDefinition:
+      type: object
+      required:
+        - scenario_id
+        - name
+        - description
+        - workload_profile
+      properties:
+        scenario_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        workload_profile:
+          type: string
+          enum:
+            - steady_state
+            - burst
+            - ramp_up
+            - ramp_down
+            - chaos
+            - spike
+        duration_seconds:
+          type: integer
+          minimum: 1
+        concurrency:
+          type: integer
+          minimum: 1
+        parameters:
+          type: object
+
+    ScenarioRunRequest:
+      type: object
+      required: [scenario_id]
+      properties:
+        scenario_id:
+          type: string
+          format: uuid
+        overrides:
+          type: object
+        record_replay:
+          type: boolean
+          default: false
+        mode:
+          type: string
+          enum:
+            - live
+            - shadow
+            - replay
+          default: live
+
+    ScenarioRunResult:
+      type: object
+      required:
+        - run_id
+        - scenario_id
+        - status
+        - workloads_generated
+        - geometric_stability_score
+        - geometric_stability_state
+        - created_at
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        scenario_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - completed
+            - failed
+            - partial
+        workloads_generated:
+          type: integer
+        workloads_routed:
+          type: integer
+        workloads_failed:
+          type: integer
+        mean_latency_ms:
+          type: number
+          format: float
+        p99_latency_ms:
+          type: number
+          format: float
+        geometric_stability_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        geometric_stability_state:
+          type: string
+          enum:
+            - stable_pass
+            - unstable_pass
+            - stable_fail
+            - unstable_fail
+        replay_recording_id:
+          type: string
+          format: uuid
+          nullable: true
+        audit_record_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    ReplayStartRequest:
+      type: object
+      required: [replay_recording_id]
+      properties:
+        replay_recording_id:
+          type: string
+          format: uuid
+        speed_multiplier:
+          type: number
+          format: float
+          minimum: 0.1
+          maximum: 10.0
+          default: 1.0
+        mode:
+          type: string
+          enum:
+            - live
+            - shadow
+          default: shadow
+
+    ReplayStatus:
+      type: object
+      required:
+        - replay_id
+        - state
+        - replay_recording_id
+        - progress_pct
+      properties:
+        replay_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+            - running
+            - paused
+            - completed
+            - failed
+        replay_recording_id:
+          type: string
+          format: uuid
+        progress_pct:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 100.0
+        workloads_replayed:
+          type: integer
+        workloads_remaining:
+          type: integer
+        speed_multiplier:
+          type: number
+          format: float
+        started_at:
+          type: string
+          format: date-time
+        paused_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ModeUpdate:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum:
+            - live
+            - shadow
+            - replay
+
+    ModeResponse:
+      type: object
+      required:
+        - mode
+        - updated_at
+      properties:
+        mode:
+          type: string
+          enum:
+            - live
+            - shadow
+            - replay
+        previous_mode:
+          type: string
+          enum:
+            - live
+            - shadow
+            - replay
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time

@@ -1,0 +1,1210 @@
+ou are a senior principal architect tasked with producing
+complete technical documentation and specifications for a
+governed agentic inference platform called the Red Hat Intel
+AI Platform. This is not a design exercise. This is production
+documentation that will be used to build, extend, and operate
+real systems on Red Hat OpenShift infrastructure with Intel
+Gaudi 3 and Xeon6 inference servers.
+
+Read every word of this prompt before producing anything.
+The platform has theoretical foundations, architectural
+layers, existing implementations, and development methodology
+requirements that must all be reflected accurately and
+completely in the output.
+
+---
+
+THEORETICAL FOUNDATIONS
+
+These foundations are not background context. They are
+load-bearing constraints that shape every architectural
+decision. Every component specification must reference
+the theoretical foundation it responds to.
+
+Computational Irreducibility
+The behavioral state space of complex distributed
+infrastructure cannot be analytically predicted faster
+than the system itself executes. This property makes:
+- Closed-form prediction inadequate
+- Universal threshold calibration unreliable
+- Purely synthetic test generation epistemically incomplete
+- Long-horizon planning unsafe without bounded validation
+
+Every architectural component is a deliberate response to
+a specific dimension of this irreducibility. Document which
+dimension each component addresses and why the component
+is necessary given that dimension. The complexity of the
+architecture is justified by and proportional to the
+irreducibility of the problem domain.
+
+Geometric State Theory
+The probability manifold of an LLM has measurable geometric
+shape. Stable outputs produce stable geometry. Adversarial
+pressure, hallucination, and novel input distributions
+destabilize the manifold. This instability is physically
+measurable.
+
+The platform uses geometric stability as a first-class
+signal across all LLM call sites. Geometric stability is
+measured via activation variance across transformer layers
+during inference. High variance indicates manifold
+instability. Low variance indicates stability.
+
+Geometric stability produces four evaluation states:
+- Stable pass: correct output from stable geometry.
+  High confidence. Trust the result.
+- Unstable pass: correct output from unstable geometry.
+  Fragile. Flag for additional validation.
+- Stable fail: incorrect output from stable geometry.
+  High confidence failure signal. The rubric is correctly
+  identifying a real problem.
+- Unstable fail: incorrect output from unstable geometry.
+  Possible classification artifact. Investigate before acting.
+
+Document how geometric stability is measured, stored,
+surfaced, and consumed by each component that calls an LLM.
+
+---
+
+CORE ARCHITECTURAL COMPONENTS
+
+These components must be fully specified. Each specification
+must include: purpose, inputs, outputs, interfaces, data
+models, failure modes, governance properties, geometric
+stability integration, and implementation guidance.
+
+COMPONENT 1: THE HYPOTHESIS ENGINE
+
+Purpose: Replace LLM-as-decision-maker with
+LLM-as-hypothesis-generator. The LLM generates structured
+falsifiable hypotheses about observed system state. A
+separate deterministic mechanism validates hypotheses
+against evidence. The LLM's confidence is irrelevant.
+Only evidence validation matters.
+
+Theoretical grounding: Responds to computational
+irreducibility by replacing prediction with structured
+falsifiable inquiry. Makes agent reasoning falsifiable
+in a way that prompt-response systems cannot be.
+
+Inputs:
+- Structured evidence bundle from the evidence collection
+  layer: cluster state, telemetry, rubric evaluation
+  results, event stream data
+- Historical hypothesis outcomes: which hypotheses were
+  validated, which were falsified, which were inconclusive
+- Geometric stability score from the LLM call that
+  generated each hypothesis
+
+Outputs:
+- Ranked hypothesis queue: ordered by geometric stability
+  of originating LLM call, then by prior validation rate
+  of similar hypotheses
+- Each hypothesis: structured claim about system state,
+  testable conditions that would validate or falsify it,
+  confidence score, geometric stability score, timestamp
+- Hypothesis audit record: persisted to PostgreSQL with
+  full evidence snapshot at time of generation
+
+Hypothesis generation process:
+- High geometric stability hypotheses generated first
+- Low geometric stability hypotheses generated only if
+  high stability hypotheses are exhausted or falsified
+- Novel failure modes that produce no hypothesis
+  candidates trigger a rubric extension event: log the
+  unclassified evidence bundle and flag for human review
+- Hypothesis queue is consumed by the constraint
+  classification layer for validation
+
+Geometric stability integration:
+- Measure activation variance across Granite transformer
+  layers during each hypothesis generation call
+- Store stability score alongside hypothesis in PostgreSQL
+- Stable geometry hypotheses weighted higher in queue
+- Unstable geometry hypotheses flagged in audit trail
+- If geometric stability falls below configurable
+  threshold: do not generate hypothesis, log the
+  instability event, escalate to human review queue
+
+Interface:
+- REST API: POST /hypotheses/generate
+  Input: evidence bundle JSON
+  Output: ranked hypothesis queue JSON
+- WebSocket: hypothesis_generated event
+- Kafka topic: hypothesis.generated
+- PostgreSQL: hypotheses table with full audit fields
+
+Failure modes:
+- LLM unavailable: queue last known hypotheses with
+  staleness flag, alert operator
+- All hypotheses falsified: trigger rubric extension
+  event, escalate to human
+- Geometric instability sustained: suspend hypothesis
+  generation, alert operator, log duration of instability
+
+---
+
+COMPONENT 2: EVIDENCE-BASED CONSTRAINT CLASSIFICATION
+
+Purpose: Classify system state by evaluating structured
+evidence against formal constraint definitions.
+Classification is deterministic given the evidence.
+The LLM's role if any is evidence interpretation at
+the boundary, not classification. Every classification
+decision has a complete evidence chain that can be
+traced, audited, and challenged.
+
+Theoretical grounding: Responds to computational
+irreducibility by grounding classification in observed
+state rather than anticipated state. Responds to geometric
+state theory by incorporating stability scores into
+classification confidence.
+
+Constraint schema:
+Define a formal typed constraint schema. Each constraint
+must specify:
+- constraint_id: unique identifier
+- constraint_name: human readable
+- stage: which rubric stage this constraint belongs to
+- assertion_type: threshold, boolean, range, pattern,
+  composite
+- assertion_definition: the formal assertion over
+  observable state variables
+- evidence_requirements: which evidence fields must be
+  present for this constraint to be evaluable
+- severity: critical, major, minor
+- remediation_class: which remediation action class
+  applies when this constraint fails
+- geometric_stability_weight: how much geometric
+  stability of the classifying LLM call affects
+  confidence in this constraint's evaluation
+
+Current constraint stages (Stargate's eleven rubric stages):
+- cluster-health
+- namespace-ready
+- deployment-ready
+- route-ready
+- vm-runtime-ready
+(document remaining six stages with full constraint
+schema for each)
+
+Classification process:
+- Evidence bundle received from collectors
+- Each constraint evaluated against evidence
+  deterministically where possible
+- LLM interpretation called only for constraints that
+  require semantic understanding of unstructured evidence
+- Geometric stability measured for each LLM call
+- Classification result: pass, fail, inconclusive,
+  unclassifiable
+- Confidence score: combines evidence completeness,
+  constraint assertion strength, geometric stability
+  of any LLM calls involved
+- Novel evidence that matches no constraint:
+  unclassifiable event logged, hypothesis extension
+  triggered, human review flagged
+
+Outputs:
+- Classification result per constraint per evidence bundle
+- Confidence score with geometric stability component
+- Complete evidence chain: which evidence satisfied or
+  failed which assertion
+- Audit record: persisted to PostgreSQL before any
+  action is taken based on classification
+
+Interface:
+- REST API: POST /classify
+  Input: evidence bundle JSON
+  Output: classification result with confidence and
+  evidence chain
+- Kafka topic: classification.completed
+- PostgreSQL: classifications table with full audit fields
+
+Failure modes:
+- Evidence incomplete: return inconclusive with missing
+  fields enumerated
+- Constraint schema version mismatch: reject with
+  schema version error, do not classify
+- Geometric instability during LLM interpretation:
+  return unstable classification flag, require human
+  review before action
+
+---
+
+COMPONENT 3: LLM-MPC (LARGE LANGUAGE MODEL MODEL
+PREDICTIVE CONTROL)
+
+Purpose: Apply model predictive control theory to
+agent decision-making using LLM reasoning over
+system state as the dynamics model. Replaces the
+parametric dynamics model of classical MPC with
+LLM reasoning over structured evidence. Maintains
+the receding horizon, optimization, and replanning
+properties of classical MPC.
+
+Theoretical grounding: Responds to computational
+irreducibility by using short receding horizons
+calibrated to locally smooth dynamics rather than
+assuming long-horizon predictability. Responds to
+geometric state theory by using geometric stability
+as an automatic horizon limiter.
+
+Control structure:
+- Maintain a model of current system state from
+  evidence collectors
+- At each control cycle: generate predictions over
+  receding horizon N using LLM reasoning
+- Optimize control action against predictions within
+  defined constraint boundaries
+- Execute first action only
+- Observe outcome, update state model, replan
+- Repeat
+
+Receding horizon management:
+- Default horizon N: configurable, start at 2 steps
+- Horizon automatically shortens when geometric
+  stability of prediction LLM call falls below
+  configurable threshold
+- Horizon extends only when sustained geometric
+  stability is observed across multiple consecutive
+  prediction cycles
+- Maximum horizon: configurable, never exceed without
+  explicit operator approval
+- Minimum horizon: 1 step always
+
+Geometric stability integration:
+- Measure stability of each prediction call
+- High stability: trust prediction, use for optimization
+- Low stability: shorten horizon, flag prediction,
+  require higher confidence threshold before action
+- Sustained instability: suspend MPC, fall back to
+  reactive classification only, alert operator
+
+Objective function:
+- Define formally what on-course looks like for each
+  cluster and workload type
+- Objective is cluster-specific: calibrated from
+  operational history via NanoObs and Deepfield
+- Objective must be expressible in a form that LLM
+  can reason about without ambiguity
+- Objective updates are versioned and audited
+
+Optimization step:
+- Generate candidate control actions from constraint
+  classification layer
+- Score each candidate against predicted state trajectory
+- Select highest scoring candidate within constraint
+  boundaries
+- Log optimization decision with full candidate set
+  and scores
+
+Interface:
+- REST API: POST /mpc/plan
+  Input: current state, objective, horizon
+  Output: recommended action with prediction trace
+- Kafka topic: mpc.action.recommended
+- PostgreSQL: mpc_cycles table with full prediction
+  and optimization audit trail
+
+Operational history requirement:
+- LLM-MPC must not be activated on a cluster until
+  that cluster has accumulated minimum configurable
+  weeks of rubric evaluation history
+- Activation gate enforced programmatically not by
+  policy
+- Attempting to activate before history threshold
+  met returns explicit error with history deficit
+
+Failure modes:
+- Prediction horizon collapses to zero: suspend MPC,
+  alert operator, log instability duration
+- Objective function undefined for cluster: refuse
+  to plan, require operator to define objective first
+- All candidate actions violate constraints: escalate
+  to human, log constraint violation set
+
+---
+
+COMPONENT 4: DEEPFIELD
+
+Purpose: Govern agent cognitive complexity by mapping
+task complexity to hardware substrate as a policy
+decision. Task complexity determines reasoning
+requirement. Reasoning requirement determines substrate.
+Substrate determines cost, latency, and governance
+surface. Policy governs the mapping. Different substrates
+produce qualitatively different epistemic outputs not
+just quantitatively faster ones.
+
+Theoretical grounding: Responds to computational
+irreducibility by acknowledging that each cluster traces
+a unique irreducible trajectory requiring per-cluster
+calibration rather than universal thresholds. Responds
+to geometric state theory by using geometric stability
+as a routing confidence signal.
+
+Tier definitions:
+Nano tier:
+- Substrate: CPU
+- Agent type: deterministic, rule-based, boolean
+  evaluation
+- Task characteristics: single assertion, no reasoning
+  required, binary outcome
+- Governance surface: minimal, outcome is deterministic
+- Audit requirement: log input, output, timestamp
+- Example: is pod running, is route accessible,
+  is replica count at minimum
+
+Micro tier:
+- Substrate: Xeon6
+- Agent type: moderate reasoning, structured inference
+- Task characteristics: multi-condition evaluation,
+  pattern matching, structured classification
+- Governance surface: medium, outcome is probabilistic
+  but bounded
+- Audit requirement: log input, output, confidence,
+  reasoning summary, geometric stability score
+- Example: classify failure mode from pod logs,
+  evaluate namespace health against rubric stage
+
+Macro tier:
+- Substrate: Gaudi 3
+- Agent type: complex reasoning, long context,
+  multi-step inference
+- Task characteristics: novel failure analysis,
+  hypothesis generation, root cause reasoning,
+  cross-cluster pattern detection
+- Governance surface: maximum, outcome is probabilistic
+  and unbounded
+- Audit requirement: full evidence bundle, hypothesis
+  set, confidence scores, geometric stability profile,
+  human review flag if stability below threshold
+- Example: executive readiness summary, cross-cluster
+  failure correlation, novel failure mode classification
+
+Routing policy:
+- Workload classification: determine tier based on
+  task complexity characteristics
+- Hardware availability check: is target substrate
+  available and within utilization threshold
+- Fallback policy: if target substrate unavailable
+  or saturated, what is the escalation path
+- Routing decision logged to audit trail with
+  classification reasoning and geometric stability
+  score of classification call
+- Policy override: operator can manually route with
+  mandatory reason code logged
+
+NanoObs integration:
+- NanoObs observes nano agent execution against
+  current thresholds per cluster
+- Evidence accumulates in structured form per cluster
+- THE generates hypotheses about threshold drift
+- Constraint classification validates whether drift
+  is significant enough to warrant adjustment
+- Adaptive threshold recommendation produced
+- Human approval required before threshold adjustment
+  applied to production routing
+- All adjustments versioned and audited
+
+Geometric stability in routing:
+- Classification call that determines workload tier
+  has geometric stability measured
+- Stable classification: route with full confidence
+- Unstable classification: flag, require secondary
+  validation, consider escalating to next tier for
+  safety margin
+- Sustained instability in classification: suspend
+  adaptive routing, fall back to static policy, alert
+
+Agentic coding extension (future phase):
+- New nano agents can be proposed by the system in
+  response to observed cluster conditions
+- Proposal goes through constraint classification
+  validation against the cluster's evidence profile
+- Synthetic scenario replay against candidate agent
+  in sandbox
+- If passes: promote to production with audit record
+- If fails: reject with full failure evidence record
+- No new nano agent touches real cluster state without
+  passing the promotion gate
+- Document the promotion gate specification fully
+
+Interface:
+- REST API: POST /deepfield/route
+  Input: workload description, current cluster state
+  Output: tier assignment, substrate recommendation,
+  routing confidence, geometric stability score
+- Kafka topic: deepfield.routing.decision
+- PostgreSQL: routing_decisions table with full audit
+
+---
+
+COMPONENT 5: STARGATE EXTENSIONS
+
+Stargate is an existing production platform. Do not
+redesign it. Extend it with the components above.
+
+Current confirmed architecture:
+- React + PatternFly 6 frontend
+- FastAPI backend
+- PostgreSQL via Alembic migrations
+- CLI interface
+- 10 data sources: Labagator, Demolition, Babylon
+  Control Plane, Cluster Scanners (9 clusters, 3 tiers),
+  StarGate Engine, Event Bus (nanoagent pipeline:
+  Filter/Correlate/Triage/Impact), LLM Engine via
+  LiteLLM, AgnosticV, Sandbox-API, ZeroTouch
+- 11 rubric stages
+- PatternFly 6 dashboard with Red Hat SSO
+- Existing views: Labs, Clusters, Pools, Errors,
+  Pipeline, Admin, Executive Summary
+
+Extensions required:
+
+Integrate THE as a new service consumed by Stargate:
+- THE receives evidence bundles from Stargate's
+  existing collectors
+- Hypothesis queue feeds Stargate's Event Bus as
+  a new event type: hypothesis.generated
+- Hypothesis outcomes feed back to THE for learning
+- Add Hypotheses tab to existing dashboard
+
+Integrate evidence-based constraint classification:
+- Extend existing rubric engine with formal constraint
+  schema as specified above
+- Each rubric stage becomes a set of typed constraint
+  assertions not free-form evaluations
+- Classification results include geometric stability
+  scores from LiteLLM calls
+- Existing PostgreSQL evaluation tables extended with
+  stability fields via Alembic migration
+
+Integrate LLM-MPC:
+- New service alongside existing Stargate backend
+- Activation gated on cluster operational history
+- MPC recommendations surface in existing Admin view
+- New MPC tab showing prediction trace and
+  optimization history
+- Autonomous mode toggle in Admin: OFF by default
+
+Integrate Deepfield routing:
+- Gaudi and Xeon6 added as named cluster targets
+  via STARGATE_GAUDI_URL and STARGATE_XEON6_URL
+- Hardware view tab added alongside existing views
+- Routing decisions logged to audit trail
+- NanoObs data feeds adaptive threshold recommendations
+
+Geometric stability infrastructure:
+- LiteLLM wrapper extended to capture activation
+  variance where backend exposes it
+- Stability score stored with every LLM call record
+- Stability dashboard widget added to Admin view
+- Stability threshold configuration in configmap
+
+---
+
+COMPONENT 6: LAUNCHPAD (INTELLIGENCE LAYER)
+
+Launchpad is not a provisioning tool. It is a
+provisioning intelligence layer that sits on top
+of the existing RHDP ecosystem. It mines provisioning
+data generated by the existing RHDP stack and surfaces
+patterns that the existing ecosystem does not see.
+
+Data sources consumed:
+- RHDP provisioning event stream
+- Babylon Control Plane via existing Stargate collector
+- Sandbox-API via existing Stargate collector
+- ZeroTouch catalog data via existing Stargate collector
+- Labagator lab and session data via existing
+  Stargate collector
+
+Intelligence outputs:
+- Demand signals: which demos are most requested,
+  which configurations fail most often, which partners
+  return and which don't
+- Cost attribution: compute cost per lab session,
+  per SA, per partner, per Intel hardware configuration
+- Utilization patterns: idle time, peak demand windows,
+  underutilized configurations
+- Routing intelligence: which workload types
+  consistently route to Gaudi versus Xeon6, feeding
+  Deepfield's static routing policy before adaptive
+  calibration has history
+
+Interface:
+- REST API: GET /launchpad/intelligence
+  Output: demand signals, cost attribution,
+  utilization patterns
+- Kafka topic: launchpad.intelligence.updated
+- PostgreSQL: launchpad_intelligence table
+- Dashboard: Launchpad Intelligence tab in Stargate
+
+---
+
+DEVELOPMENT METHODOLOGY
+
+The platform is built using a layered correctness
+discipline. Every component must be built using
+all applicable layers. Document the methodology
+artifacts required for each component.
+
+EDD -- Evaluation Driven Development:
+The primary development methodology. Write the
+evaluation rubric before implementation. Build
+until the rubric passes. The rubric matrix has:
+- Rows: evaluation dimensions covering correctness,
+  performance, governance compliance, evidence
+  completeness, geometric stability
+- Columns: implementation milestones
+- Third axis: geometric stability state at each
+  evaluation point: stable pass, unstable pass,
+  stable fail, unstable fail
+
+Development target: stable green across all
+evaluation dimensions. Unstable passes are not
+acceptable for production promotion regardless
+of passing score.
+
+For each component produce:
+- Complete evaluation rubric matrix before any
+  implementation guidance
+- Geometric stability evaluation criteria
+- Promotion gate: what stable green across all
+  dimensions looks like for this component
+
+TDD -- Test Driven Development:
+Unit and integration correctness layer. Applied
+within each EDD milestone. Red/green cycle.
+
+For each component produce:
+- Unit test specifications for all pure functions
+- Integration test specifications for all
+  cross-component interactions
+- Test data requirements
+
+BDD -- Behavior Driven Development:
+Behavioral correctness layer. Given/When/Then
+scenarios that become executable specifications.
+
+For each component produce:
+- BDD scenarios for all primary use cases
+- BDD scenarios for all failure modes
+- BDD scenarios for all governance properties
+
+PDD -- Property Driven Development:
+Invariant correctness layer. Define properties
+that must hold across all inputs. Use Hypothesis
+(Python) for property-based test generation.
+
+For each component produce:
+- Invariant definitions: properties that must
+  always hold regardless of input
+- Property test specifications using Hypothesis
+- Edge case properties: what must hold at
+  system boundaries
+
+SBE -- Specification by Example:
+Concrete examples that serve simultaneously as
+specification, test, and documentation. Must
+stay synchronized with implementation.
+
+For each component produce:
+- Concrete examples of valid inputs and expected outputs
+- Concrete examples of invalid inputs and expected
+  rejection behavior
+- Concrete examples of geometric stability states
+  and their governance consequences
+
+CDD -- Contract Driven Development:
+Interface contract correctness layer. Define API
+contracts before implementation. Generate stubs
+and mocks from contracts. Both sides develop
+independently against contracts.
+
+For each component produce:
+- OpenAPI 3.1 specification for all REST endpoints
+- AsyncAPI specification for all Kafka topics
+- Pact contract tests for all consumer/provider pairs
+- Contract version management approach
+
+GDD -- Geometric Driven Development:
+Novel methodology layer specific to this platform.
+Geometric stability of LLM calls is a first-class
+development artifact. No component that calls an LLM
+ships to production without geometric stability
+measurement implemented and passing EDD rubric
+evaluation for the stability dimension.
+
+For each component that calls an LLM produce:
+- Geometric stability measurement implementation
+- Stability threshold configuration
+- Stability state handling for all four states:
+  stable pass, unstable pass, stable fail, unstable fail
+- Stability audit record specification
+
+---
+
+POLYGLOT STACK SPECIFICATION
+
+Use the best tool for each function. Do not force
+a single language across the platform. Document
+the rationale for each language and framework choice.
+
+Backend services:
+Python with FastAPI: primary language for all
+existing Stargate services, all new service
+extensions, THE, evidence classification engine,
+LLM-MPC controller. Rationale: existing codebase,
+LiteLLM integration, ML library ecosystem,
+Hypothesis for property testing.
+
+Rust: performance-critical components where latency
+matters. Nanoagent implementations in Deepfield's
+nano tier. Event Bus filter and correlate stages.
+Geometric stability measurement hot path. Rationale:
+memory safety, zero-cost abstractions, deterministic
+performance, existing Guardian-Agent precedent.
+
+Go: Kubernetes operators and controllers. Any
+component that needs to interact directly with
+the Kubernetes API at high frequency. Rationale:
+Kubernetes ecosystem standard, controller-runtime
+framework, low memory overhead for long-running
+cluster watchers.
+
+TypeScript with React: all frontend components.
+Existing Stargate dashboard. PatternFly 6.
+Rationale: existing codebase.
+
+Frontend:
+React with PatternFly 6: all dashboard components.
+Vite: build tooling.
+WebSocket: real time panel updates.
+
+Data:
+PostgreSQL: primary persistence. All audit trails,
+classification history, hypothesis records,
+MPC cycles, routing decisions.
+Alembic: all migrations. Match existing patterns exactly.
+Kafka: event bus backbone. All inter-service
+communication. All real-time data flows.
+
+LLM serving:
+LiteLLM: abstraction layer. Model is configurable.
+Granite on Gaudi for production. Model-swappable
+without code changes.
+vLLM: inference serving on Gaudi and Xeon6.
+Exposes activation data where needed for geometric
+stability measurement.
+
+Infrastructure:
+OpenShift: deployment target for all services.
+Kubernetes operators: cluster watchers and controllers.
+Helm: chart packaging for all deployable components.
+Configmap: all configuration. No hardcoded values.
+UBI9: base image for all containers.
+
+Testing:
+Pytest: Python unit and integration tests.
+Hypothesis: property-based testing for Python.
+Pact: contract testing for all service interfaces.
+Playwright: end to end browser testing for dashboard.
+Behave: BDD scenario execution for Python.
+Rust test framework: unit tests for Rust components.
+
+Observability:
+OpenTelemetry: all instrumentation. Metrics, traces, logs.
+Prometheus: metrics collection.
+Grafana: metrics visualization.
+Loki: log aggregation.
+Jaeger: distributed tracing.
+
+---
+
+KAFKA EVENT ARCHITECTURE
+
+All inter-service communication flows through Kafka.
+Document the complete topic taxonomy.
+
+Topics required:
+
+evidence.collected
+- Producer: all Stargate collectors
+- Consumer: THE, constraint classification engine
+- Schema: evidence bundle with cluster ID, timestamp,
+  collector source, raw evidence fields
+
+hypothesis.generated
+- Producer: THE
+- Consumer: constraint classification engine,
+  Stargate Event Bus
+- Schema: hypothesis ID, claim, testable conditions,
+  confidence, geometric stability score, timestamp
+
+classification.completed
+- Producer: constraint classification engine
+- Consumer: LLM-MPC, Deepfield, Stargate dashboard
+- Schema: classification ID, constraint results,
+  confidence scores, geometric stability scores,
+  evidence chain reference, audit record ID
+
+mpc.action.recommended
+- Producer: LLM-MPC
+- Consumer: action execution layer, Stargate dashboard
+- Schema: action ID, action type, predicted state
+  trajectory, optimization score, confidence,
+  geometric stability profile, approval status
+
+deepfield.routing.decision
+- Producer: Deepfield
+- Consumer: inference serving layer, Stargate dashboard
+- Schema: routing ID, workload description, tier
+  assignment, substrate, confidence, geometric
+  stability score, policy rule applied
+
+launchpad.intelligence.updated
+- Producer: Launchpad intelligence layer
+- Consumer: Stargate dashboard, Deepfield routing policy
+- Schema: intelligence type, data payload,
+  time window, confidence
+
+action.executed
+- Producer: action execution layer
+- Consumer: audit trail, Stargate dashboard
+- Schema: action ID, action type, cluster, namespace,
+  before state, after state, outcome, operator if human
+
+audit.event
+- Producer: all components
+- Consumer: audit trail persister, Stargate dashboard
+- Schema: event ID, source component, event type,
+  payload reference, geometric stability if applicable,
+  timestamp, operator if human involved
+
+replay.scenario
+- Producer: synthetic client service
+- Consumer: all consumers of evidence.collected
+  in replay mode
+- Schema: scenario ID, scenario name, event sequence,
+  replay speed multiplier, ground truth expected outcomes
+
+---
+
+SYNTHETIC CLIENT AND KAFKA REPLAY SPECIFICATION
+
+The synthetic client generates realistic cluster state
+for testing without touching production infrastructure.
+Kafka replay replays recorded real event sequences
+deterministically.
+
+Synthetic client requirements:
+- Named scenarios: define scenario set covering all
+  known failure modes and governance-relevant states
+- Each scenario: deterministic state payload, known
+  expected classification outcomes, known expected
+  hypothesis candidates, known expected routing decisions
+- Geometric stability simulation: scenarios include
+  simulated stability profiles to test stability-aware
+  components
+- Scale: scenarios cover single namespace, cluster-wide,
+  and cross-cluster scope
+- Entropy injection: configurable noise in scenario
+  payloads to test robustness
+- REST API: POST /scenarios/run, GET /scenarios/list
+- Kafka producer: publishes to evidence.collected
+  topic indistinguishably from real collectors
+
+Kafka replay requirements:
+- Record: capture real event sequences to named
+  replay archives
+- Replay: re-publish recorded sequences at configurable
+  speed to replay topic
+- Pause and inspect: pause replay at any offset,
+  inspect full system state at that point
+- Speed control: slower than real time for training
+  and walkthroughs, faster for stress testing
+- Ground truth comparison: compare system outputs
+  during replay against recorded ground truth outputs
+- Demo mode: curated scenario replay with pause
+  points for partner presentations
+
+---
+
+GEOMETRIC STABILITY MEASUREMENT SPECIFICATION
+
+This is a novel component with no existing implementation
+to reference. Specify it completely.
+
+Measurement approach:
+Primary: activation variance across transformer layers
+during LLM inference. Requires access to model
+internals. Available when running Granite locally
+via vLLM on Gaudi or Xeon6.
+
+Fallback when activation access unavailable:
+- Output token probability variance across top-k
+  alternatives at each generation step
+- Perplexity of generated output against input context
+- Logit entropy at each generation step
+These are weaker signals than activation variance
+but measurable through standard LLM APIs.
+
+Stability score computation:
+- Raw signal: activation variance across L layers
+- Normalize to 0.0 to 1.0 scale: 0.0 is maximally
+  unstable, 1.0 is maximally stable
+- Configurable stability threshold: default 0.7
+- Below threshold: unstable, flag call site
+- Above threshold: stable, proceed normally
+
+Storage:
+- Every LLM call record in PostgreSQL includes:
+  stability_score float, stability_method enum
+  (activation_variance, token_probability,
+  perplexity, logit_entropy), stability_threshold
+  float at time of measurement, stability_state
+  enum (stable_pass, unstable_pass, stable_fail,
+  unstable_fail)
+
+Alembic migration:
+- Add stability fields to all existing LLM call
+  tables: llm_analysis, evaluations, any table
+  that records LLM outputs
+
+LiteLLM wrapper extension:
+- Intercept all LLM calls
+- Attempt activation variance measurement
+- Fall back to token probability variance if
+  activation unavailable
+- Attach stability score to response before
+  returning to caller
+- Log stability event to audit.event Kafka topic
+
+Dashboard:
+- Stability monitor widget in Admin view
+- Time series of stability scores per LLM call type
+- Alert when sustained instability detected
+- Stability state distribution chart: proportion
+  of calls in each of four states over time
+
+---
+
+DATA MODELS
+
+Specify complete PostgreSQL schemas for all new tables.
+Use existing Alembic migration patterns exactly.
+
+New tables required:
+
+hypotheses
+- id: uuid primary key
+- evidence_bundle_id: foreign key to evidence store
+- claim: text
+- testable_conditions: jsonb
+- confidence_score: float
+- geometric_stability_score: float
+- geometric_stability_method: enum
+- geometric_stability_state: enum
+- validation_outcome: enum nullable
+- validated_at: timestamp nullable
+- created_at: timestamp
+- audit_record_id: uuid foreign key
+
+constraint_definitions
+- id: uuid primary key
+- constraint_id: varchar unique
+- constraint_name: varchar
+- stage: varchar
+- assertion_type: enum
+- assertion_definition: jsonb
+- evidence_requirements: jsonb
+- severity: enum
+- remediation_class: varchar
+- geometric_stability_weight: float
+- version: integer
+- created_at: timestamp
+- deprecated_at: timestamp nullable
+
+classifications
+- id: uuid primary key
+- evidence_bundle_id: uuid
+- constraint_id: uuid foreign key
+- result: enum (pass, fail, inconclusive, unclassifiable)
+- confidence_score: float
+- geometric_stability_score: float
+- geometric_stability_state: enum
+- evidence_chain: jsonb
+- llm_interpretation_used: boolean
+- created_at: timestamp
+- audit_record_id: uuid foreign key
+
+mpc_cycles
+- id: uuid primary key
+- cluster_id: varchar
+- horizon: integer
+- current_state: jsonb
+- predictions: jsonb
+- candidate_actions: jsonb
+- selected_action_id: uuid nullable
+- optimization_score: float
+- geometric_stability_profile: jsonb
+- horizon_adjusted: boolean
+- created_at: timestamp
+- audit_record_id: uuid foreign key
+
+routing_decisions
+- id: uuid primary key
+- workload_id: uuid
+- workload_description: jsonb
+- tier_assignment: enum (nano, micro, macro)
+- substrate: enum (cpu, xeon6, gaudi)
+- confidence_score: float
+- geometric_stability_score: float
+- geometric_stability_state: enum
+- policy_rule_applied: varchar
+- override: boolean
+- override_reason: varchar nullable
+- override_operator: varchar nullable
+- created_at: timestamp
+- audit_record_id: uuid foreign key
+
+nano_obs_records
+- id: uuid primary key
+- cluster_id: varchar
+- agent_id: varchar
+- threshold_id: varchar
+- observed_value: float
+- threshold_value: float
+- drift_detected: boolean
+- drift_magnitude: float nullable
+- adjustment_recommended: boolean
+- adjustment_value: float nullable
+- adjustment_approved: boolean nullable
+- approved_by: varchar nullable
+- approved_at: timestamp nullable
+- created_at: timestamp
+
+audit_events
+- id: uuid primary key
+- source_component: varchar
+- event_type: varchar
+- payload_reference: uuid
+- geometric_stability_score: float nullable
+- operator: varchar nullable
+- trigger_type: enum (auto, manual, system)
+- created_at: timestamp
+
+llm_stability_records
+(extend existing LLM call tables via migration)
+- stability_score: float
+- stability_method: enum
+- stability_threshold: float
+- stability_state: enum
+
+---
+
+OPENAPI CONTRACTS
+
+Produce complete OpenAPI 3.1 specifications for:
+- THE: /hypotheses endpoints
+- Classification engine: /classify endpoints
+- LLM-MPC: /mpc endpoints
+- Deepfield: /deepfield endpoints
+- Launchpad: /launchpad endpoints
+- Synthetic client: /scenarios endpoints
+- Geometric stability: /stability endpoints
+
+Each specification must include:
+- All request schemas with field types and validation
+- All response schemas with field types
+- All error response schemas
+- Authentication requirements
+- Rate limiting specifications
+- Example request and response payloads
+
+---
+
+ASYNCAPI CONTRACTS
+
+Produce complete AsyncAPI 2.6 specifications for
+all Kafka topics listed in the event architecture
+section above.
+
+Each specification must include:
+- Topic name and configuration
+- Message schema with all fields typed
+- Producer identification
+- Consumer identification
+- Message ordering guarantees
+- Retention policy
+- Example message payloads
+
+---
+
+HELM CHART SPECIFICATIONS
+
+Produce Helm chart structures for:
+- hypothesis-engine
+- classification-engine
+- llm-mpc-controller
+- deepfield-router
+- nanoobs-collector
+- synthetic-client
+- stability-monitor
+- launchpad-intelligence
+
+Each chart must include:
+- values.yaml with all configurable parameters
+- Deployment manifest
+- Service manifest
+- ConfigMap manifest
+- HorizontalPodAutoscaler manifest
+- ServiceAccount manifest with minimum required RBAC
+- NetworkPolicy manifest
+- PodDisruptionBudget manifest
+
+---
+
+EVALUATION RUBRIC MATRICES
+
+Produce complete EDD evaluation rubric matrices for
+each component before any implementation guidance.
+
+Each matrix must specify:
+- All evaluation dimensions with explicit pass criteria
+- Geometric stability evaluation criteria for each
+  dimension that involves LLM calls
+- Implementation milestones as columns
+- Promotion gate: what stable green looks like
+  across all dimensions
+- Known hard dimensions: which dimensions are most
+  likely to be difficult and why
+
+---
+
+INTEGRATION MAP
+
+Produce a complete integration map showing:
+- All components and their relationships
+- All Kafka topic flows between components
+- All REST API dependencies between components
+- All PostgreSQL table dependencies
+- All external system integrations: Granite via
+  LiteLLM, Gaudi endpoints, Xeon6 endpoints,
+  OpenShift API, all existing Stargate data sources
+- The complete data flow from evidence collection
+  through hypothesis generation through classification
+  through routing through action through audit
+
+This map is the primary onboarding artifact for
+any engineer joining the platform. It must be
+complete enough that someone with no prior context
+can understand the full system from this document alone.
+
+---
+
+OPERATIONAL RUNBOOKS
+
+Produce runbooks for:
+- Geometric instability event: sustained instability
+  detected, what to investigate, what to do
+- Hypothesis queue exhausted: all hypotheses falsified,
+  novel failure mode suspected, escalation path
+- MPC horizon collapse: prediction horizon reduced
+  to minimum, causes, recovery procedure
+- Deepfield routing fallback: target substrate
+  unavailable, fallback policy execution
+- Classification unclassifiable event: evidence
+  matches no constraint, rubric extension trigger,
+  human review process
+- Nano agent promotion failure: candidate agent
+  failed promotion gate, evidence record review
+- LLM unavailable: all LLM-dependent components
+  fall back to last known state, alert propagation
+
+---
+
+CONSTRAINTS NON NEGOTIABLE:
+
+Every component specification must:
+- Reference the theoretical foundation it responds to
+- Include geometric stability integration
+- Include complete audit trail specification
+- Include Kafka event publication for all significant
+  state changes
+- Include OpenAPI or AsyncAPI contract
+- Include EDD rubric matrix before implementation
+  guidance
+- Include TDD unit test specifications
+- Include BDD scenario specifications
+- Include PDD invariant definitions
+- Include CDD contract specifications
+- Degrade gracefully when dependencies unavailable
+- Never hardcode configuration values
+- Deploy on OpenShift via Helm chart
+- Use UBI9 base images
+
+Existing Stargate code must not be broken. All
+extensions are additive only. Match existing
+PatternFly 6 patterns, FastAPI patterns, Alembic
+migration patterns, and PostgreSQL model patterns exactly.
+
+The platform must run in three modes:
+LIVE: all real endpoints, real cluster data,
+real LLM calls with geometric stability measurement
+SYNTHETIC: synthetic client generates all evidence,
+system runs identically, stability simulated
+REPLAY: Kafka replay drives evidence stream from
+recorded real events, system runs identically,
+ground truth comparison active
+
+Mode is configurable via environment variable.
+Mode switch does not require restart. Mode is
+always visible in dashboard header.
+
+---
+
+DELIVER IN THIS ORDER:
+
+1. Theoretical foundation summary: how each foundation
+   constrains each architectural decision
+
+2. Integration map: complete system view before
+   any component detail
+
+3. Kafka topic taxonomy: complete event architecture
+
+4. For each component in this order:
+   a. THE
+   b. Evidence-based constraint classification
+   c. LLM-MPC
+   d. Deepfield with NanoObs
+   e. Launchpad intelligence layer
+   f. Geometric stability infrastructure
+   g. Synthetic client and Kafka replay
+   
+   For each component deliver in this order:
+   - EDD rubric matrix
+   - OpenAPI or AsyncAPI contract
+   - PostgreSQL schema and Alembic migration
+   - TDD unit test specifications
+   - BDD scenario specifications
+   - PDD invariant definitions
+   - CDD contract specifications
+   - GDD geometric stability specification
+   - Helm chart specification
+   - Implementation guidance: language, frameworks,
+     patterns, rationale
+   - Operational runbook
+
+5. Stargate extension specifications: additive only,
+   match existing patterns
+
+6. Development environment setup: how to run the
+   full platform locally before OpenShift deployment
+
+7. Known gaps and future work: what is specified
+   here but not yet implementable, what requires
+   additional research, what is deferred to later phases

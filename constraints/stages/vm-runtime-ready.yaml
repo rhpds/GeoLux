@@ -1,0 +1,39 @@
+stage: vm-runtime-ready
+version: 1
+constraints:
+  - constraint_id: vm-001
+    constraint_name: VM instance running
+    assertion_type: boolean
+    assertion_definition:
+      field: vm_running
+      value: true
+    evidence_requirements:
+      - vm_running
+    severity: critical
+    remediation_class: start_vm
+    geometric_stability_weight: 0.3
+
+  - constraint_id: vm-002
+    constraint_name: VM accessible via SSH or console
+    assertion_type: boolean
+    assertion_definition:
+      field: vm_accessible
+      value: true
+    evidence_requirements:
+      - vm_accessible
+    severity: major
+    remediation_class: check_vm_networking
+    geometric_stability_weight: 0.3
+
+  - constraint_id: vm-003
+    constraint_name: VM disk usage acceptable
+    assertion_type: threshold
+    assertion_definition:
+      field: vm_disk_percent
+      operator: lte
+      value: 90
+    evidence_requirements:
+      - vm_disk_percent
+    severity: minor
+    remediation_class: cleanup_vm_disk
+    geometric_stability_weight: 0.3

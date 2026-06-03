@@ -1,0 +1,111 @@
+openapi: "3.1.0"
+info:
+  title: GeoLux LLM-MPC Controller API
+  description: Model Predictive Control with LLM dynamics model and automatic horizon adjustment
+  version: "0.1.0"
+
+paths:
+  /mpc/plan:
+    post:
+      operationId: createMPCPlan
+      summary: Execute one MPC planning cycle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MPCPlanRequest"
+      responses:
+        "201":
+          description: MPC cycle completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MPCPlanResponse"
+
+  /mpc/cycles:
+    get:
+      operationId: listMPCCycles
+      parameters:
+        - name: cluster_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: MPC cycle history
+
+  /mpc/cycles/{cycle_id}:
+    get:
+      operationId: getMPCCycle
+      parameters:
+        - name: cycle_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cycle details
+        "404":
+          description: Not found
+
+components:
+  schemas:
+    MPCPlanRequest:
+      type: object
+      required: [cluster_id, current_state]
+      properties:
+        cluster_id:
+          type: string
+        current_state:
+          type: object
+        objective:
+          type: object
+        horizon:
+          type: integer
+          minimum: 1
+
+    MPCPlanResponse:
+      type: object
+      properties:
+        cycle_id:
+          type: string
+        cluster_id:
+          type: string
+        horizon:
+          type: integer
+        predictions:
+          type: array
+          items:
+            type: object
+        recommended_action:
+          type: object
+          nullable: true
+        optimization_score:
+          type: number
+        geometric_stability_profile:
+          type: object
+          properties:
+            scores:
+              type: array
+              items:
+                type: number
+            mean:
+              type: number
+            min:
+              type: number
+        horizon_adjusted:
+          type: boolean
+        suspended:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        error:
+          type: string

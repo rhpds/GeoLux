@@ -1,0 +1,153 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux Audit Event
+  version: 1.0.0
+  description: >
+    Unified audit trail for all GeoLux actions. Every component in the
+    platform emits audit events to this topic, creating a comprehensive
+    record of all decisions, actions, and state changes for compliance
+    and forensic analysis.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-audit-events:
+    description: >
+      Unified audit events from all GeoLux components. Each message
+      records a discrete auditable event including the source component,
+      event type, and a reference to the full payload. Consumed by the
+      audit trail persister for long-term storage and the dashboard for
+      real-time visibility.
+    bindings:
+      kafka:
+        partitions: 6
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 31536000000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishAuditEvent
+      summary: >
+        All GeoLux components publish audit events to this topic for
+        compliance and traceability.
+      message:
+        $ref: '#/components/messages/AuditEvent'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeAuditEvent
+      summary: >
+        Audit trail persister and dashboard consume audit events for
+        long-term storage and real-time visibility.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - audit-trail-persister
+              - stargate-dashboard
+
+  x-ordering-guarantees:
+    description: >
+      Messages are partitioned by event_id. Events from the same logical
+      flow are delivered to the same partition when sharing the same
+      event_id prefix, preserving causal ordering.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 365 days (31536000000 ms). The long
+      retention period supports compliance requirements, incident
+      investigations, and historical audits.
+
+components:
+  messages:
+    AuditEvent:
+      name: AuditEvent
+      title: Audit Event
+      summary: A unified audit event from any GeoLux component.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to event_id for ordering guarantees.
+      payload:
+        $ref: '#/components/schemas/AuditEventPayload'
+      examples:
+        - name: ExampleAuditEvent
+          summary: An audit event recording a classification decision by the classification engine.
+          headers:
+            partitionKey: evt-aaa111bbb222
+          payload:
+            event_id: evt-aaa111bbb222
+            source_component: classification-engine
+            event_type: classification_completed
+            payload_reference: s3://geolux-audit/2026/06/02/cls-x9y8z7w6.json
+            stability_score: 0.90
+            timestamp: "2026-06-02T14:32:00.000Z"
+            operator: system
+
+  schemas:
+    AuditEventPayload:
+      type: object
+      description: Unified audit event payload.
+      required:
+        - event_id
+        - source_component
+        - event_type
+        - payload_reference
+        - stability_score
+        - timestamp
+        - operator
+      properties:
+        event_id:
+          type: string
+          description: Unique identifier for this audit event.
+          example: evt-aaa111bbb222
+        source_component:
+          type: string
+          description: >
+            The GeoLux component that produced this audit event (e.g.
+            classification-engine, llm-mpc, deepfield, action-execution).
+          example: classification-engine
+        event_type:
+          type: string
+          description: >
+            Category of the auditable event (e.g. classification_completed,
+            action_recommended, action_executed, routing_decision,
+            evidence_collected).
+          example: classification_completed
+        payload_reference:
+          type: string
+          description: >
+            Reference to the full event payload, typically a URI pointing
+            to an object store or database record (e.g. S3 URI, database
+            record ID).
+          example: s3://geolux-audit/2026/06/02/cls-x9y8z7w6.json
+        stability_score:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+          description: >
+            Stability score at the time of the event, capturing the system's
+            stability assessment when the event occurred.
+          example: 0.90
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the event occurred.
+          example: "2026-06-02T14:32:00.000Z"
+        operator:
+          type: string
+          description: >
+            The operator (human user or system identity) responsible for
+            the event. Use "system" for automated actions.
+          example: system

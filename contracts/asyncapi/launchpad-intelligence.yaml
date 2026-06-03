@@ -1,0 +1,152 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux Launchpad Intelligence
+  version: 1.0.0
+  description: >
+    Provisioning intelligence updates from the Launchpad service. These
+    messages carry intelligence data (capacity forecasts, cost signals,
+    availability zone health) that inform the dashboard and Deepfield
+    routing policies.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-launchpad-intelligence:
+    description: >
+      Intelligence updates emitted by Launchpad whenever new provisioning
+      signals or forecasts are computed. Consumed by the dashboard and the
+      Deepfield routing policy engine.
+    bindings:
+      kafka:
+        partitions: 1
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 2592000000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishLaunchpadIntelligence
+      summary: Launchpad publishes provisioning intelligence updates.
+      message:
+        $ref: '#/components/messages/LaunchpadIntelligence'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeLaunchpadIntelligence
+      summary: >
+        Dashboard and Deepfield routing policy engine consume intelligence
+        updates for visualization and policy adjustment.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - stargate-dashboard
+              - deepfield-routing-policy
+
+  x-ordering-guarantees:
+    description: >
+      This topic uses a single partition, so all messages are totally
+      ordered. The partition key is set to the intelligence_type to
+      enable future partitioning if the topic is scaled.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 30 days (2592000000 ms). The longer retention
+      supports historical analysis of provisioning intelligence trends.
+
+components:
+  messages:
+    LaunchpadIntelligence:
+      name: LaunchpadIntelligence
+      title: Launchpad Intelligence Event
+      summary: A provisioning intelligence update from Launchpad.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to intelligence_type for partitioning.
+      payload:
+        $ref: '#/components/schemas/LaunchpadIntelligencePayload'
+      examples:
+        - name: ExampleCapacityForecast
+          summary: A capacity forecast intelligence update for GPU tier.
+          headers:
+            partitionKey: capacity_forecast
+          payload:
+            intelligence_type: capacity_forecast
+            data_payload:
+              tier: gpu-tier-1
+              region: us-east-1
+              current_utilization: 0.78
+              forecasted_utilization_1h: 0.85
+              forecasted_utilization_6h: 0.72
+              recommended_headroom_pct: 20
+            time_window:
+              start: "2026-06-02T14:00:00.000Z"
+              end: "2026-06-02T20:00:00.000Z"
+            confidence: 0.79
+
+  schemas:
+    LaunchpadIntelligencePayload:
+      type: object
+      description: A provisioning intelligence update payload.
+      required:
+        - intelligence_type
+        - data_payload
+        - time_window
+        - confidence
+      properties:
+        intelligence_type:
+          type: string
+          description: >
+            Category of the intelligence update (e.g. capacity_forecast,
+            cost_signal, az_health, spot_interruption_probability).
+          example: capacity_forecast
+        data_payload:
+          type: object
+          description: >
+            Free-form intelligence data. Structure varies by
+            intelligence_type.
+          additionalProperties: true
+          example:
+            tier: gpu-tier-1
+            region: us-east-1
+            current_utilization: 0.78
+            forecasted_utilization_1h: 0.85
+            forecasted_utilization_6h: 0.72
+            recommended_headroom_pct: 20
+        time_window:
+          type: object
+          description: >
+            The time window the intelligence data covers.
+          required:
+            - start
+            - end
+          properties:
+            start:
+              type: string
+              format: date-time
+              description: Start of the time window (ISO-8601).
+              example: "2026-06-02T14:00:00.000Z"
+            end:
+              type: string
+              format: date-time
+              description: End of the time window (ISO-8601).
+              example: "2026-06-02T20:00:00.000Z"
+        confidence:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+          description: >
+            Confidence in the intelligence data accuracy over the stated
+            time window.
+          example: 0.79

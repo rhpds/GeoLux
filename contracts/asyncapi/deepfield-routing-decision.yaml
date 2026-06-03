@@ -1,0 +1,183 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux Deepfield Routing Decision
+  version: 1.0.0
+  description: >
+    Workload routing decisions produced by Deepfield. Each decision assigns a
+    workload to a compute tier and substrate based on policy rules, confidence
+    scoring, and stability assessment.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-deepfield-routing:
+    description: >
+      Routing decisions made by Deepfield for inference workloads. Each
+      message specifies the tier assignment, substrate selection, and the
+      policy rule that drove the decision. Consumed by the inference-serving
+      layer and the dashboard.
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 2592000000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishDeepfieldRoutingDecision
+      summary: Deepfield publishes workload routing decisions.
+      message:
+        $ref: '#/components/messages/DeepfieldRoutingDecision'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeDeepfieldRoutingDecision
+      summary: >
+        Inference-serving and dashboard consume routing decisions for
+        workload placement and visualization.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - inference-serving
+              - stargate-dashboard
+
+  x-ordering-guarantees:
+    description: >
+      Messages are partitioned by routing_id. All messages related to the
+      same routing decision are delivered to the same partition, preserving
+      ordering.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 30 days (2592000000 ms). The longer retention
+      supports analysis of routing decisions and policy effectiveness over
+      time.
+
+components:
+  messages:
+    DeepfieldRoutingDecision:
+      name: DeepfieldRoutingDecision
+      title: Deepfield Routing Decision Event
+      summary: A workload routing decision made by Deepfield.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to routing_id for ordering guarantees.
+      payload:
+        $ref: '#/components/schemas/DeepfieldRoutingDecisionPayload'
+      examples:
+        - name: ExampleDeepfieldRoutingDecision
+          summary: A routing decision assigning an LLM inference workload to GPU tier.
+          headers:
+            partitionKey: rt-q5r6s7t8
+          payload:
+            routing_id: rt-q5r6s7t8
+            workload_description:
+              workload_id: wl-inference-llm-70b
+              model: llama-70b-chat
+              request_rate_rps: 150
+              latency_slo_ms: 200
+              priority: high
+            tier_assignment: gpu-tier-1
+            substrate: nvidia-a100-80gb
+            confidence: 0.93
+            stability_score: 0.88
+            policy_rule_applied: latency-sensitive-gpu-first-v3
+
+  schemas:
+    DeepfieldRoutingDecisionPayload:
+      type: object
+      description: A routing decision assigning a workload to a compute tier.
+      required:
+        - routing_id
+        - workload_description
+        - tier_assignment
+        - substrate
+        - confidence
+        - stability_score
+        - policy_rule_applied
+      properties:
+        routing_id:
+          type: string
+          description: Unique identifier for this routing decision.
+          example: rt-q5r6s7t8
+        workload_description:
+          type: object
+          description: >
+            Description of the workload being routed, including its
+            requirements and characteristics.
+          required:
+            - workload_id
+          properties:
+            workload_id:
+              type: string
+              description: Identifier for the workload.
+              example: wl-inference-llm-70b
+            model:
+              type: string
+              description: Model identifier if the workload is model inference.
+              example: llama-70b-chat
+            request_rate_rps:
+              type: number
+              format: double
+              description: Current or expected request rate in requests per second.
+              example: 150
+            latency_slo_ms:
+              type: integer
+              description: Latency SLO target in milliseconds.
+              example: 200
+            priority:
+              type: string
+              description: Priority level of the workload.
+              enum:
+                - critical
+                - high
+                - medium
+                - low
+              example: high
+          additionalProperties: true
+        tier_assignment:
+          type: string
+          description: >
+            The compute tier to which the workload is assigned (e.g.
+            gpu-tier-1, cpu-tier-standard, spot-tier).
+          example: gpu-tier-1
+        substrate:
+          type: string
+          description: >
+            The hardware substrate selected for this workload (e.g.
+            nvidia-a100-80gb, nvidia-h100, cpu-amd-epyc).
+          example: nvidia-a100-80gb
+        confidence:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+          description: Confidence in the routing decision.
+          example: 0.93
+        stability_score:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+          description: >
+            Stability score indicating how stable the chosen tier/substrate
+            is under current conditions.
+          example: 0.88
+        policy_rule_applied:
+          type: string
+          description: >
+            Identifier of the routing policy rule that was applied to make
+            this decision.
+          example: latency-sensitive-gpu-first-v3

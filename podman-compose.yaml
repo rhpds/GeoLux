@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_DB: stargate
+      POSTGRES_USER: geolux
+      POSTGRES_PASSWORD: geolux
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  geolux-api:
+    build:
+      context: .
+      dockerfile: Containerfile
+    ports:
+      - "8091:8091"
+    environment:
+      GEOLUX_DATABASE_URL: postgresql://${POSTGRES_USER:-geolux}:${POSTGRES_PASSWORD:-geolux}@postgres:5432/stargate
+      GEOLUX_MODE: synthetic
+      GEOLUX_STABILITY_THRESHOLD: "0.7"
+      GEOLUX_CORS_ORIGINS: "http://localhost:3001,http://localhost:8091"
+    depends_on:
+      - postgres
+
+  geolux-frontend:
+    build:
+      context: .
+      dockerfile: Containerfile.frontend
+    ports:
+      - "3001:3001"
+    environment:
+      GEOLUX_API_URL: http://geolux-api:8091
+    depends_on:
+      - geolux-api
+
+volumes:
+  pgdata:

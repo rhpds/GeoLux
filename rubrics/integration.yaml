@@ -1,0 +1,73 @@
+id: integration
+version: v0.1.0
+component: end-to-end-integration
+description: >
+  Final EDD rubric matrix for end-to-end integration and deployment readiness.
+
+evaluation_dimensions:
+  end_to_end:
+    description: Full pipeline flows through all components
+    pass_criteria:
+      - Synthetic scenario → classify → hypothesize → validate → MPC → route → audit
+      - Healthy cluster pipeline produces passing classification + hypotheses
+      - Failing cluster pipeline produces fail classification + hypotheses
+      - All audit events present in trail
+    current_state: green
+
+  all_components:
+    description: Every component passes its individual gate
+    pass_criteria:
+      - Phase 1 Geometric Stability: PASSED
+      - Phase 2 Hypothesis Engine: PASSED
+      - Phase 3 Constraint Classification: PASSED
+      - Phase 4 LLM-MPC: PASSED
+      - Phase 5 Deepfield + NanoObs: PASSED
+      - Phase 6 Launchpad Intelligence: PASSED
+      - Phase 7 Synthetic Client + Replay: PASSED
+      - Phase 8 Dashboard Extensions: PASSED
+    current_state: green
+
+  helm:
+    description: Helm charts render and deploy
+    pass_criteria:
+      - Chart.yaml, values.yaml, templates present
+      - helm template renders without errors
+    current_state: green
+
+  modes:
+    description: LIVE/SYNTHETIC/REPLAY all work
+    pass_criteria:
+      - Mode switch via PUT /mode without restart
+      - Mode visible in response headers
+      - Replay mode guards replay-only endpoints
+    current_state: green
+
+  existing_stargate:
+    description: All existing Stargate functionality unchanged
+    pass_criteria:
+      - GeoLux tables prefixed with glx_ (no collision)
+      - No modifications to Stargate code
+      - Additive extensions only
+    current_state: green
+
+  runbooks:
+    description: All 7 operational runbooks written
+    pass_criteria:
+      - geometric_instability_event.md
+      - hypothesis_queue_exhausted.md
+      - mpc_horizon_collapse.md
+      - deepfield_routing_fallback.md
+      - classification_unclassifiable.md
+      - llm_unavailable.md
+      - nano_agent_promotion_failure.md
+    current_state: green
+
+  integration_map:
+    description: Complete system view documented
+    pass_criteria:
+      - INTEGRATION_MAP.md covers all components, Kafka flows, REST dependencies, DB tables, data flow, modes, external integrations
+    current_state: green
+
+promotion_gate:
+  description: All dimensions stable green — PRODUCTION READY
+  status: PASSED

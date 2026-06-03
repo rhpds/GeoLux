@@ -1,0 +1,6 @@
+apiVersion: v2
+name: geolux
+description: Governed agentic inference platform — geometric stability, hypothesis generation, constraint classification, MPC, and Deepfield routing
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,208 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux MPC Action Recommended
+  version: 1.0.0
+  description: >
+    MPC recommended actions with prediction traces. The LLM-MPC controller
+    emits recommended actions that include predicted state trajectories,
+    optimization scores, and approval status for downstream execution.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-mpc-action-recommended:
+    description: >
+      Actions recommended by the LLM-MPC controller after evaluating
+      classification results and predicting future state trajectories.
+      Consumed by the action-execution service and the dashboard.
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 2592000000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishMpcActionRecommended
+      summary: LLM-MPC publishes recommended actions with prediction traces.
+      message:
+        $ref: '#/components/messages/MpcActionRecommended'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeMpcActionRecommended
+      summary: >
+        Action execution service and dashboard consume recommended actions
+        for execution and visualization.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - action-execution
+              - stargate-dashboard
+
+  x-ordering-guarantees:
+    description: >
+      Messages are partitioned by action_id. All messages related to the
+      same action recommendation are delivered to the same partition,
+      preserving ordering.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 30 days (2592000000 ms). The longer retention
+      supports post-hoc analysis of recommended actions and their outcomes.
+
+components:
+  messages:
+    MpcActionRecommended:
+      name: MpcActionRecommended
+      title: MPC Action Recommended Event
+      summary: An action recommended by the LLM-MPC controller.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to action_id for ordering guarantees.
+      payload:
+        $ref: '#/components/schemas/MpcActionRecommendedPayload'
+      examples:
+        - name: ExampleMpcActionRecommended
+          summary: A scale-up action recommended for inference-serving pods.
+          headers:
+            partitionKey: act-m1n2o3p4
+          payload:
+            action_id: act-m1n2o3p4
+            action_type: horizontal_scale_up
+            predicted_state_trajectory:
+              - step: 0
+                time_offset_seconds: 0
+                predicted_cpu_utilization: 0.95
+                predicted_latency_p99_ms: 120
+              - step: 1
+                time_offset_seconds: 300
+                predicted_cpu_utilization: 0.65
+                predicted_latency_p99_ms: 55
+              - step: 2
+                time_offset_seconds: 600
+                predicted_cpu_utilization: 0.60
+                predicted_latency_p99_ms: 42
+            optimization_score: 0.87
+            confidence: 0.84
+            stability_profile:
+              pre_action_stability: 0.45
+              predicted_post_action_stability: 0.92
+              convergence_time_seconds: 600
+            approval_status: pending
+
+  schemas:
+    MpcActionRecommendedPayload:
+      type: object
+      description: >
+        An action recommendation produced by the LLM-MPC controller,
+        including a predicted state trajectory and stability profile.
+      required:
+        - action_id
+        - action_type
+        - predicted_state_trajectory
+        - optimization_score
+        - confidence
+        - stability_profile
+        - approval_status
+      properties:
+        action_id:
+          type: string
+          description: Unique identifier for this action recommendation.
+          example: act-m1n2o3p4
+        action_type:
+          type: string
+          description: >
+            The type of action being recommended (e.g. horizontal_scale_up,
+            vertical_scale_up, config_change, rollback).
+          example: horizontal_scale_up
+        predicted_state_trajectory:
+          type: array
+          description: >
+            Predicted future system state at discrete time steps after the
+            action would be executed.
+          items:
+            type: object
+            required:
+              - step
+              - time_offset_seconds
+            properties:
+              step:
+                type: integer
+                description: Step index in the trajectory.
+                example: 0
+              time_offset_seconds:
+                type: integer
+                description: Seconds from action execution to this predicted state.
+                example: 300
+            additionalProperties:
+              description: >
+                Predicted metric values at this step (e.g.
+                predicted_cpu_utilization, predicted_latency_p99_ms).
+        optimization_score:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+          description: >
+            Score reflecting how well the recommended action optimizes the
+            objective function.
+          example: 0.87
+        confidence:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+          description: Confidence that the action will achieve the predicted outcome.
+          example: 0.84
+        stability_profile:
+          type: object
+          description: >
+            Stability assessment before and after the action, including
+            predicted convergence time.
+          required:
+            - pre_action_stability
+            - predicted_post_action_stability
+            - convergence_time_seconds
+          properties:
+            pre_action_stability:
+              type: number
+              format: double
+              minimum: 0.0
+              maximum: 1.0
+              description: Current stability score before the action.
+              example: 0.45
+            predicted_post_action_stability:
+              type: number
+              format: double
+              minimum: 0.0
+              maximum: 1.0
+              description: Predicted stability score after the action converges.
+              example: 0.92
+            convergence_time_seconds:
+              type: integer
+              description: Estimated seconds until the system stabilizes post-action.
+              example: 600
+        approval_status:
+          type: string
+          description: >
+            Current approval status of the action (pending, approved,
+            rejected, auto-approved).
+          enum:
+            - pending
+            - approved
+            - rejected
+            - auto-approved
+          example: pending

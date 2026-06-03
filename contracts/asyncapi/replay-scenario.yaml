@@ -1,0 +1,221 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux Replay Scenario
+  version: 1.0.0
+  description: >
+    Synthetic scenario replay events. The synthetic client produces replay
+    scenarios that drive evidence-collected consumers in replay mode,
+    enabling testing, validation, and what-if analysis against known
+    ground-truth outcomes.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-replay-scenario:
+    description: >
+      Replay scenario events produced by the synthetic client for testing
+      and validation. Each scenario defines an event sequence with expected
+      outcomes that can be replayed at configurable speed. Consumed by
+      evidence-collected consumers operating in replay mode.
+    bindings:
+      kafka:
+        partitions: 1
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 604800000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishReplayScenario
+      summary: Synthetic client publishes replay scenarios.
+      message:
+        $ref: '#/components/messages/ReplayScenario'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeReplayScenario
+      summary: >
+        Evidence-collected consumers in replay mode consume scenarios for
+        testing and validation against ground truth.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - evidence-collected-consumers-in-replay-mode
+
+  x-ordering-guarantees:
+    description: >
+      This topic uses a single partition, so all messages are totally
+      ordered. Messages are keyed by scenario_id to enable future
+      partitioning if the topic is scaled.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 7 days (604800000 ms). Replay scenarios
+      are ephemeral by nature and can be re-produced by the synthetic
+      client as needed.
+
+components:
+  messages:
+    ReplayScenario:
+      name: ReplayScenario
+      title: Replay Scenario Event
+      summary: A synthetic scenario for replaying through the GeoLux pipeline.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to scenario_id for partitioning.
+      payload:
+        $ref: '#/components/schemas/ReplayScenarioPayload'
+      examples:
+        - name: ExampleReplayScenario
+          summary: A CPU throttling scenario replayed at 10x speed.
+          headers:
+            partitionKey: scn-cpu-throttle-001
+          payload:
+            scenario_id: scn-cpu-throttle-001
+            scenario_name: CPU Throttling Under Load - Inference Serving
+            event_sequence:
+              - sequence_number: 1
+                event_type: evidence_collected
+                timestamp_offset_ms: 0
+                payload:
+                  cluster_id: cluster-us-east-1-prod
+                  collector_source: stargate-collector-metrics-v2
+                  evidence_fields:
+                    cpu_utilization: 0.80
+                    memory_pressure: 0.40
+              - sequence_number: 2
+                event_type: evidence_collected
+                timestamp_offset_ms: 60000
+                payload:
+                  cluster_id: cluster-us-east-1-prod
+                  collector_source: stargate-collector-metrics-v2
+                  evidence_fields:
+                    cpu_utilization: 0.92
+                    memory_pressure: 0.42
+              - sequence_number: 3
+                event_type: evidence_collected
+                timestamp_offset_ms: 120000
+                payload:
+                  cluster_id: cluster-us-east-1-prod
+                  collector_source: stargate-collector-metrics-v2
+                  evidence_fields:
+                    cpu_utilization: 0.98
+                    memory_pressure: 0.45
+                    cpu_throttle_seconds: 45
+            replay_speed_multiplier: 10.0
+            ground_truth_expected_outcomes:
+              - expected_hypothesis_claim_contains: CPU throttling
+                expected_classification_violated_constraint: cpu_limit_headroom
+                expected_action_type: horizontal_scale_up
+                expected_outcome: success
+
+  schemas:
+    ReplayScenarioPayload:
+      type: object
+      description: >
+        A synthetic replay scenario with an ordered event sequence and
+        expected ground-truth outcomes for validation.
+      required:
+        - scenario_id
+        - scenario_name
+        - event_sequence
+        - replay_speed_multiplier
+        - ground_truth_expected_outcomes
+      properties:
+        scenario_id:
+          type: string
+          description: Unique identifier for this replay scenario.
+          example: scn-cpu-throttle-001
+        scenario_name:
+          type: string
+          description: Human-readable name for the scenario.
+          example: CPU Throttling Under Load - Inference Serving
+        event_sequence:
+          type: array
+          description: >
+            Ordered sequence of events to replay. Each event includes a
+            timestamp offset from the start of the scenario and the
+            event payload.
+          items:
+            type: object
+            required:
+              - sequence_number
+              - event_type
+              - timestamp_offset_ms
+              - payload
+            properties:
+              sequence_number:
+                type: integer
+                description: >
+                  Position of this event in the sequence (1-based). Events
+                  are replayed in sequence_number order.
+                example: 1
+              event_type:
+                type: string
+                description: >
+                  The type of event being replayed (e.g. evidence_collected).
+                example: evidence_collected
+              timestamp_offset_ms:
+                type: integer
+                description: >
+                  Milliseconds from the start of the scenario at which this
+                  event should be emitted. Actual delay is divided by
+                  replay_speed_multiplier.
+                example: 60000
+              payload:
+                type: object
+                description: >
+                  The event payload to emit. Structure matches the schema
+                  of the corresponding event type.
+                additionalProperties: true
+        replay_speed_multiplier:
+          type: number
+          format: double
+          minimum: 0.1
+          description: >
+            Speed multiplier for the replay. A value of 10.0 means events
+            are replayed 10x faster than their original timing. Must be
+            greater than 0.
+          example: 10.0
+        ground_truth_expected_outcomes:
+          type: array
+          description: >
+            Expected outcomes for validation. After replaying the scenario,
+            the system's actual behaviour is compared against these expected
+            outcomes to determine pass/fail.
+          items:
+            type: object
+            properties:
+              expected_hypothesis_claim_contains:
+                type: string
+                description: >
+                  Substring expected in the generated hypothesis claim.
+                example: CPU throttling
+              expected_classification_violated_constraint:
+                type: string
+                description: >
+                  Name of the constraint expected to be violated in
+                  classification.
+                example: cpu_limit_headroom
+              expected_action_type:
+                type: string
+                description: >
+                  The action type expected to be recommended by MPC.
+                example: horizontal_scale_up
+              expected_outcome:
+                type: string
+                description: >
+                  The expected outcome after action execution.
+                example: success
+            additionalProperties: true

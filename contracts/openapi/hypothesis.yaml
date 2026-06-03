@@ -1,0 +1,198 @@
+openapi: "3.1.0"
+info:
+  title: GeoLux Hypothesis Engine API
+  description: Structured falsifiable hypothesis generation and validation
+  version: "0.1.0"
+
+paths:
+  /hypotheses/generate:
+    post:
+      operationId: generateHypotheses
+      summary: Generate ranked hypothesis queue from evidence bundle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceBundle"
+      responses:
+        "201":
+          description: Hypothesis queue generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HypothesisQueueResult"
+
+  /hypotheses/queue:
+    get:
+      operationId: getHypothesisQueue
+      summary: Get unresolved hypothesis queue
+      parameters:
+        - name: evidence_bundle_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Hypothesis queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HypothesisQueueResponse"
+
+  /hypotheses/{hypothesis_id}:
+    get:
+      operationId: getHypothesis
+      summary: Get a specific hypothesis by ID
+      parameters:
+        - name: hypothesis_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Hypothesis details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HypothesisResponse"
+        "404":
+          description: Hypothesis not found
+
+  /hypotheses/{hypothesis_id}/validate:
+    post:
+      operationId: validateHypothesis
+      summary: Record validation outcome for a hypothesis
+      parameters:
+        - name: hypothesis_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationRequest"
+      responses:
+        "200":
+          description: Validation recorded
+        "400":
+          description: Invalid outcome value
+        "404":
+          description: Hypothesis not found
+
+components:
+  schemas:
+    EvidenceBundle:
+      type: object
+      required: [bundle_id, cluster_id, timestamp, collector_source, evidence_fields]
+      properties:
+        bundle_id:
+          type: string
+        cluster_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        collector_source:
+          type: string
+        evidence_fields:
+          type: object
+
+    HypothesisResponse:
+      type: object
+      required: [hypothesis_id, claim, testable_conditions, confidence_score, geometric_stability_score, geometric_stability_state, created_at]
+      properties:
+        hypothesis_id:
+          type: string
+        claim:
+          type: string
+        testable_conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestableCondition"
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        geometric_stability_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        geometric_stability_state:
+          type: string
+          enum: [stable_pass, unstable_pass, stable_fail, unstable_fail]
+        validation_outcome:
+          type: string
+          enum: [validated, falsified, inconclusive]
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    TestableCondition:
+      type: object
+      required: [field, operator, value]
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+          enum: [eq, gt, lt, gte, lte, contains, matches]
+        value: {}
+
+    HypothesisQueueResponse:
+      type: object
+      properties:
+        hypotheses:
+          type: array
+          items:
+            $ref: "#/components/schemas/HypothesisResponse"
+        total:
+          type: integer
+
+    HypothesisQueueResult:
+      type: object
+      properties:
+        evidence_bundle_id:
+          type: string
+        hypotheses:
+          type: array
+          items:
+            $ref: "#/components/schemas/HypothesisResponse"
+        total:
+          type: integer
+        stability_score:
+          type: number
+        stability_state:
+          type: string
+        gated:
+          type: boolean
+        stale:
+          type: boolean
+        reason:
+          type: string
+        audit_record_id:
+          type: string
+
+    ValidationRequest:
+      type: object
+      required: [hypothesis_id, outcome]
+      properties:
+        hypothesis_id:
+          type: string
+        outcome:
+          type: string
+          enum: [validated, falsified, inconclusive]
+        evidence:
+          type: object

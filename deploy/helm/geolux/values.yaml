@@ -1,0 +1,72 @@
+replicaCount: 1
+
+image:
+  repository: quay.io/rhpds/geolux
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8091
+
+mode: live
+
+database:
+  url: ""
+
+llm:
+  url: ""
+  apiKey: ""
+  model: granite-3-2-8b-instruct
+
+stability:
+  threshold: 0.7
+  method: token_probability
+
+mpc:
+  horizon: 2
+  maxHorizon: 5
+  minHistoryWeeks: 4
+
+deepfield:
+  gaudiUrl: ""
+  xeon6Url: ""
+
+kafka:
+  brokers: ""
+
+auth:
+  adminApiKey: ""
+
+cors:
+  origins: "http://localhost:3000"
+
+route:
+  enabled: false
+  host: ""
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  minAvailable: 1
+
+serviceAccount:
+  create: true
+  name: geolux
+
+networkPolicy:
+  enabled: true
+
+affinity: {}

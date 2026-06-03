@@ -1,0 +1,170 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux Action Executed
+  version: 1.0.0
+  description: >
+    Executed action results with before/after state. Each message records the
+    full lifecycle of an action that was carried out, including the operator
+    who approved it, the state before and after execution, and the outcome.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-action-executed:
+    description: >
+      Action execution results emitted after an approved action has been
+      carried out. Consumed by the audit trail and the dashboard for
+      tracking and visualization.
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 7776000000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishActionExecuted
+      summary: Action execution service publishes completed action results.
+      message:
+        $ref: '#/components/messages/ActionExecuted'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeActionExecuted
+      summary: >
+        Audit trail and dashboard consume action execution results for
+        compliance recording and visualization.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - audit-trail
+              - stargate-dashboard
+
+  x-ordering-guarantees:
+    description: >
+      Messages are partitioned by action_id. All messages related to the
+      same action execution are delivered to the same partition, preserving
+      ordering.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 90 days (7776000000 ms). The extended
+      retention supports compliance, incident review, and post-hoc analysis
+      of executed actions.
+
+components:
+  messages:
+    ActionExecuted:
+      name: ActionExecuted
+      title: Action Executed Event
+      summary: An action that has been executed with before/after state.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to action_id for ordering guarantees.
+      payload:
+        $ref: '#/components/schemas/ActionExecutedPayload'
+      examples:
+        - name: ExampleActionExecuted
+          summary: A horizontal scale-up action executed successfully.
+          headers:
+            partitionKey: act-m1n2o3p4
+          payload:
+            action_id: act-m1n2o3p4
+            action_type: horizontal_scale_up
+            cluster: cluster-us-east-1-prod
+            namespace: inference-serving
+            before_state:
+              replicas: 3
+              cpu_utilization: 0.95
+              latency_p99_ms: 120
+            after_state:
+              replicas: 6
+              cpu_utilization: 0.52
+              latency_p99_ms: 38
+            outcome: success
+            operator: sre-oncall@geolux.io
+
+  schemas:
+    ActionExecutedPayload:
+      type: object
+      description: >
+        Full record of an executed action including the state transition
+        and outcome.
+      required:
+        - action_id
+        - action_type
+        - cluster
+        - namespace
+        - before_state
+        - after_state
+        - outcome
+        - operator
+      properties:
+        action_id:
+          type: string
+          description: >
+            Unique identifier for the action, matching the action_id from
+            the MPC action recommendation.
+          example: act-m1n2o3p4
+        action_type:
+          type: string
+          description: >
+            The type of action that was executed (e.g. horizontal_scale_up,
+            vertical_scale_up, config_change, rollback).
+          example: horizontal_scale_up
+        cluster:
+          type: string
+          description: The cluster where the action was executed.
+          example: cluster-us-east-1-prod
+        namespace:
+          type: string
+          description: The Kubernetes namespace targeted by the action.
+          example: inference-serving
+        before_state:
+          type: object
+          description: >
+            Snapshot of the relevant system state before the action was
+            executed. Structure varies by action type.
+          additionalProperties: true
+          example:
+            replicas: 3
+            cpu_utilization: 0.95
+            latency_p99_ms: 120
+        after_state:
+          type: object
+          description: >
+            Snapshot of the relevant system state after the action was
+            executed. Structure varies by action type.
+          additionalProperties: true
+          example:
+            replicas: 6
+            cpu_utilization: 0.52
+            latency_p99_ms: 38
+        outcome:
+          type: string
+          description: The result of the action execution.
+          enum:
+            - success
+            - partial_success
+            - failure
+            - rolled_back
+            - timed_out
+          example: success
+        operator:
+          type: string
+          description: >
+            Identifier of the operator (human or system) that approved and
+            triggered the action execution.
+          example: sre-oncall@geolux.io

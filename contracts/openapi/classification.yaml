@@ -1,0 +1,141 @@
+openapi: "3.1.0"
+info:
+  title: GeoLux Constraint Classification API
+  description: Evidence-based constraint classification with formal typed assertions
+  version: "0.1.0"
+
+paths:
+  /classify:
+    post:
+      operationId: classifyEvidence
+      summary: Classify evidence bundle against constraint definitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassifyRequest"
+      responses:
+        "201":
+          description: Classification completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassifyResponse"
+
+  /classify/constraints:
+    get:
+      operationId: listConstraints
+      summary: List active constraint definitions
+      parameters:
+        - name: stage
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Constraint definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConstraintSummary"
+
+  /classify/classifications/{classification_id}:
+    get:
+      operationId: getClassification
+      summary: Get classification details
+      parameters:
+        - name: classification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Classification details
+        "404":
+          description: Not found
+
+components:
+  schemas:
+    ClassifyRequest:
+      type: object
+      required: [evidence_bundle_id, evidence]
+      properties:
+        evidence_bundle_id:
+          type: string
+        evidence:
+          type: object
+        constraint_ids:
+          type: array
+          items:
+            type: string
+        stage:
+          type: string
+        schema_version:
+          type: integer
+
+    ConstraintResult:
+      type: object
+      required: [constraint_id, result, confidence_score, evidence_chain, llm_interpretation_used]
+      properties:
+        classification_id:
+          type: string
+        constraint_id:
+          type: string
+        result:
+          type: string
+          enum: [pass, fail, inconclusive, unclassifiable]
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        geometric_stability_score:
+          type: number
+          nullable: true
+        geometric_stability_state:
+          type: string
+          nullable: true
+        evidence_chain:
+          type: object
+        llm_interpretation_used:
+          type: boolean
+
+    ClassifyResponse:
+      type: object
+      properties:
+        classification_id:
+          type: string
+        evidence_bundle_id:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConstraintResult"
+        overall_result:
+          type: string
+          enum: [pass, fail, inconclusive, unclassifiable]
+        created_at:
+          type: string
+          format: date-time
+
+    ConstraintSummary:
+      type: object
+      properties:
+        constraint_id:
+          type: string
+        constraint_name:
+          type: string
+        stage:
+          type: string
+        assertion_type:
+          type: string
+          enum: [threshold, boolean, range, pattern, composite, semantic]
+        severity:
+          type: string
+          enum: [critical, major, minor]
+        version:
+          type: integer

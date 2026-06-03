@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #EE0000;
+  --color-brand-secondary: #0071C5;
+  --color-brand-dark: #151515;
+  --color-brand-surface: #1a1a1a;
+  --color-brand-card: #212121;
+  --color-brand-border: #2e2e2e;
+  --color-brand-muted: #6A6E73;
+  --color-brand-green: #3E8635;
+}
+
+body {
+  font-family: 'Red Hat Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #151515;
+  color: #ffffff;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Red Hat Display', 'Red Hat Text', sans-serif;
+}

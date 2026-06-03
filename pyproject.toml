@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geolux"
+version = "0.1.0"
+description = "Governed agentic inference platform — geometric stability, hypothesis generation, constraint classification, and model predictive control"
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "jsonschema>=4.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+    "hypothesis>=6.92",
+    "behave>=1.2",
+    "httpx>=0.26",
+]
+api = [
+    "fastapi>=0.109",
+    "uvicorn>=0.25",
+    "psycopg2-binary>=2.9",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "litellm>=1.30",
+    "slowapi>=0.1.9",
+]
+events = [
+    "confluent-kafka>=2.3",
+]
+observability = [
+    "opentelemetry-sdk>=1.22",
+    "opentelemetry-exporter-otlp>=1.22",
+    "prometheus-client>=0.19",
+]
+contract = [
+    "pact-python>=2.1",
+]
+all = [
+    "geolux[dev,api,events,observability,contract]",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "integration: marks tests requiring PostgreSQL",
+    "property: marks property-based tests using Hypothesis",
+    "contract: marks Pact contract tests",
+]
+
+[tool.setuptools.packages.find]
+include = ["api*", "engine*", "db*", "events*", "constraints*", "scenarios*"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120

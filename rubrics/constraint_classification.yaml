@@ -1,0 +1,113 @@
+id: constraint-classification
+version: v0.1.0
+component: evidence-based-constraint-classification
+description: >
+  EDD rubric matrix for the evidence-based constraint classification engine.
+  Deterministic classification with formal typed constraint schemas.
+
+theoretical_grounding:
+  - Computational Irreducibility: grounds classification in observed state not anticipated state
+  - Geometric State Theory: stability scores incorporated into classification confidence
+
+evaluation_dimensions:
+  schema:
+    description: Constraint definitions and classifications tables
+    pass_criteria:
+      - glx_constraint_definitions table with all columns
+      - glx_classifications table with evidence chain and stability fields
+      - 11 YAML constraint files covering all rubric stages
+    current_state: green
+
+  unit_tests:
+    description: All assertion type evaluators tested
+    pass_criteria:
+      - threshold (gt/gte/lt/lte/eq), boolean, range, pattern, composite evaluated
+      - Missing field → inconclusive for all types
+      - Overall result priority: fail > unclassifiable > inconclusive > pass
+      - Confidence computation with stability weight
+    current_state: green
+    test_count: 29
+
+  integration_tests:
+    description: End-to-end classification with constraint loading
+    pass_criteria:
+      - YAML → DB sync creates all constraints
+      - Sync is idempotent
+      - Classify healthy cluster → all pass
+      - Classify unhealthy cluster → fail
+      - Missing evidence → inconclusive
+      - Classification persisted to DB with audit trail
+      - Schema version mismatch rejected
+      - Auto-loads constraints when DB empty
+      - Specific constraint_ids filtering works
+    current_state: green
+    test_count: 15
+
+  bdd_scenarios:
+    description: Behavioral specifications
+    pass_criteria:
+      - Healthy cluster passes all constraints
+      - Unhealthy cluster fails
+      - Missing evidence → inconclusive
+      - Individual assertion type evaluation
+    current_state: green
+    scenario_count: 6
+
+  pdd_invariants:
+    description: Property-based invariants
+    pass_criteria:
+      - Threshold result always pass/fail for present values
+      - Boolean deterministic for same inputs
+      - Range check passes for any value in wide range
+      - Overall result always valid
+      - Fail dominates all other results
+      - Confidence always in [0, 1]
+    current_state: green
+    test_count: 10
+
+  geometric_stability:
+    description: LLM interpretation calls measure stability
+    pass_criteria:
+      - Semantic constraints use StabilityAwareLLMClient
+      - Unstable LLM interpretation returns inconclusive + human review flag
+      - Stability score stored with classification result
+    current_state: green
+
+  kafka_events:
+    description: Classification events published
+    pass_criteria:
+      - classification.completed published after classification
+    current_state: green
+
+  audit_trail:
+    description: All classifications logged
+    pass_criteria:
+      - classification.started audit event
+      - Each classification has audit_record_id
+    current_state: green
+
+  graceful_degradation:
+    description: Handles missing/invalid data gracefully
+    pass_criteria:
+      - Missing evidence → inconclusive (not crash)
+      - Schema version mismatch → explicit rejection
+      - Empty constraint set → empty results (not crash)
+      - LLM unavailable → semantic constraints return inconclusive
+    current_state: green
+
+  contract:
+    description: OpenAPI specification
+    pass_criteria:
+      - OpenAPI 3.1 spec at contracts/openapi/classification.yaml
+      - All endpoints and schemas documented
+    current_state: green
+
+  documentation:
+    description: Operational runbook
+    pass_criteria:
+      - Runbook at runbooks/classification_unclassifiable.md
+    current_state: green
+
+promotion_gate:
+  description: All dimensions stable green
+  status: PASSED

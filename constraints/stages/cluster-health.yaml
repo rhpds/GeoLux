@@ -1,0 +1,53 @@
+stage: cluster-health
+version: 1
+constraints:
+  - constraint_id: ch-001
+    constraint_name: Cluster reachable
+    assertion_type: boolean
+    assertion_definition:
+      field: cluster_reachable
+      value: true
+    evidence_requirements:
+      - cluster_reachable
+    severity: critical
+    remediation_class: check_cluster_connectivity
+    geometric_stability_weight: 0.3
+
+  - constraint_id: ch-002
+    constraint_name: CPU usage acceptable
+    assertion_type: threshold
+    assertion_definition:
+      field: cpu_percent
+      operator: lte
+      value: 85
+    evidence_requirements:
+      - cpu_percent
+    severity: major
+    remediation_class: check_cluster_resource_usage
+    geometric_stability_weight: 0.3
+
+  - constraint_id: ch-003
+    constraint_name: Memory usage acceptable
+    assertion_type: threshold
+    assertion_definition:
+      field: memory_percent
+      operator: lte
+      value: 90
+    evidence_requirements:
+      - memory_percent
+    severity: major
+    remediation_class: check_cluster_resource_usage
+    geometric_stability_weight: 0.3
+
+  - constraint_id: ch-004
+    constraint_name: Nodes healthy
+    assertion_type: threshold
+    assertion_definition:
+      field: healthy_node_ratio
+      operator: gte
+      value: 0.8
+    evidence_requirements:
+      - healthy_node_ratio
+    severity: critical
+    remediation_class: check_node_health
+    geometric_stability_weight: 0.3

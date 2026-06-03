@@ -1,0 +1,39 @@
+stage: deployment-ready
+version: 1
+constraints:
+  - constraint_id: dr-001
+    constraint_name: Deployment exists
+    assertion_type: boolean
+    assertion_definition:
+      field: deployment_exists
+      value: true
+    evidence_requirements:
+      - deployment_exists
+    severity: critical
+    remediation_class: check_deployment
+    geometric_stability_weight: 0.3
+
+  - constraint_id: dr-002
+    constraint_name: Replicas available
+    assertion_type: threshold
+    assertion_definition:
+      field: available_replicas
+      operator: gte
+      value: 1
+    evidence_requirements:
+      - available_replicas
+    severity: critical
+    remediation_class: scale_deployment
+    geometric_stability_weight: 0.3
+
+  - constraint_id: dr-003
+    constraint_name: No crash loops
+    assertion_type: pattern
+    assertion_definition:
+      field: pod_statuses
+      pattern: "^(?!.*CrashLoopBackOff).*$"
+    evidence_requirements:
+      - pod_statuses
+    severity: major
+    remediation_class: investigate_crash_loop
+    geometric_stability_weight: 0.5

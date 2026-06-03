@@ -1,0 +1,40 @@
+stage: model-endpoint-ready
+version: 1
+constraints:
+  - constraint_id: me-001
+    constraint_name: Model endpoint serving
+    assertion_type: boolean
+    assertion_definition:
+      field: endpoint_serving
+      value: true
+    evidence_requirements:
+      - endpoint_serving
+    severity: critical
+    remediation_class: redeploy_model_endpoint
+    geometric_stability_weight: 0.3
+
+  - constraint_id: me-002
+    constraint_name: Inference latency acceptable
+    assertion_type: threshold
+    assertion_definition:
+      field: inference_p95_ms
+      operator: lte
+      value: 3000
+    evidence_requirements:
+      - inference_p95_ms
+    severity: major
+    remediation_class: investigate_inference_latency
+    geometric_stability_weight: 0.3
+
+  - constraint_id: me-003
+    constraint_name: Model health endpoint responds with 2xx
+    assertion_type: range
+    assertion_definition:
+      field: model_health_status_code
+      min: 200
+      max: 299
+    evidence_requirements:
+      - model_health_status_code
+    severity: critical
+    remediation_class: check_model_serving_runtime
+    geometric_stability_weight: 0.5

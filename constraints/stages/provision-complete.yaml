@@ -1,0 +1,39 @@
+stage: provision-complete
+version: 1
+constraints:
+  - constraint_id: pc-001
+    constraint_name: All provisioning tasks finished
+    assertion_type: boolean
+    assertion_definition:
+      field: provisioning_complete
+      value: true
+    evidence_requirements:
+      - provisioning_complete
+    severity: critical
+    remediation_class: retry_provisioning
+    geometric_stability_weight: 0.3
+
+  - constraint_id: pc-002
+    constraint_name: Provisioning duration within budget
+    assertion_type: threshold
+    assertion_definition:
+      field: provision_duration_seconds
+      operator: lte
+      value: 1800
+    evidence_requirements:
+      - provision_duration_seconds
+    severity: minor
+    remediation_class: investigate_slow_provisioning
+    geometric_stability_weight: 0.3
+
+  - constraint_id: pc-003
+    constraint_name: No provisioning error messages
+    assertion_type: pattern
+    assertion_definition:
+      field: provision_log_tail
+      pattern: "^(?!.*(ERROR|FATAL)).*$"
+    evidence_requirements:
+      - provision_log_tail
+    severity: major
+    remediation_class: diagnose_provision_errors
+    geometric_stability_weight: 0.5

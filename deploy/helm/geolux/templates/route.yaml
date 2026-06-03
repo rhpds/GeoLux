@@ -1,0 +1,20 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ .Release.Name }}-geolux
+  labels:
+    app: geolux
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  host: {{ required "route.host is required" .Values.route.host }}
+  to:
+    kind: Service
+    name: {{ .Release.Name }}-geolux
+    weight: 100
+  port:
+    targetPort: 8091
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

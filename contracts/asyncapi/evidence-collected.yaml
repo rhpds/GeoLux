@@ -1,0 +1,128 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux Evidence Collected
+  version: 1.0.0
+  description: >
+    Evidence bundles from Stargate collectors. Each message represents a
+    collected evidence bundle tied to a specific cluster, forwarded to the
+    hypothesis engine and classification engine for downstream processing.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-evidence-collected:
+    description: >
+      Evidence bundles emitted by Stargate collectors whenever new telemetry,
+      metrics, or signals are gathered for a cluster.
+    bindings:
+      kafka:
+        partitions: 6
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 604800000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishEvidenceCollected
+      summary: Stargate collectors publish evidence bundles to this topic.
+      message:
+        $ref: '#/components/messages/EvidenceCollected'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeEvidenceCollected
+      summary: >
+        Hypothesis engine and classification engine consume evidence bundles
+        for analysis and classification.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - hypothesis-engine
+              - classification-engine
+
+  x-ordering-guarantees:
+    description: >
+      Messages are partitioned by cluster_id. All evidence for the same
+      cluster is delivered to the same partition, guaranteeing ordering
+      within a cluster.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 7 days (604800000 ms). After the retention
+      window, messages are eligible for deletion.
+
+components:
+  messages:
+    EvidenceCollected:
+      name: EvidenceCollected
+      title: Evidence Collected Event
+      summary: An evidence bundle collected by a Stargate collector.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to cluster_id for ordering guarantees.
+      payload:
+        $ref: '#/components/schemas/EvidenceCollectedPayload'
+      examples:
+        - name: ExampleEvidenceCollected
+          summary: A sample evidence collected event for cluster us-east-1-prod.
+          headers:
+            partitionKey: cluster-us-east-1-prod
+          payload:
+            cluster_id: cluster-us-east-1-prod
+            timestamp: "2026-06-02T14:30:00.000Z"
+            collector_source: stargate-collector-metrics-v2
+            evidence_fields:
+              cpu_utilization: 0.72
+              memory_pressure: 0.45
+              request_latency_p99_ms: 120
+              error_rate: 0.002
+              pod_restart_count: 3
+
+  schemas:
+    EvidenceCollectedPayload:
+      type: object
+      description: Evidence bundle captured by a Stargate collector.
+      required:
+        - cluster_id
+        - timestamp
+        - collector_source
+        - evidence_fields
+      properties:
+        cluster_id:
+          type: string
+          description: Identifier of the cluster the evidence pertains to.
+          example: cluster-us-east-1-prod
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the evidence was collected.
+          example: "2026-06-02T14:30:00.000Z"
+        collector_source:
+          type: string
+          description: >
+            Identifier of the Stargate collector that produced this evidence
+            bundle (e.g. metrics collector, log collector, trace collector).
+          example: stargate-collector-metrics-v2
+        evidence_fields:
+          type: object
+          description: >
+            Free-form map of evidence data points. Keys are metric or signal
+            names; values are their observed readings.
+          additionalProperties: true
+          example:
+            cpu_utilization: 0.72
+            memory_pressure: 0.45
+            request_latency_p99_ms: 120
+            error_rate: 0.002
+            pod_restart_count: 3

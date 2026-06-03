@@ -1,0 +1,90 @@
+id: launchpad-intelligence
+version: v0.1.0
+component: launchpad-intelligence
+description: >
+  EDD rubric matrix for the Launchpad intelligence layer.
+  Aggregated operational views for demand, cost, and utilization.
+
+theoretical_grounding:
+  - Computational Irreducibility: intelligence derived from observed state, not predicted futures
+  - Geometric State Theory: stability scores propagated through aggregation pipeline
+
+evaluation_dimensions:
+  schema:
+    description: Intelligence entries and snapshot tables
+    pass_criteria:
+      - glx_launchpad_intelligence table with all columns
+      - glx_launchpad_demand_snapshots table with workload breakdown
+      - glx_launchpad_cost_snapshots table with tier-level cost tracking
+      - glx_launchpad_utilization_snapshots table with tier-level utilization
+    current_state: green
+
+  unit_tests:
+    description: Intelligence aggregation and snapshot logic tests
+    pass_criteria:
+      - Intelligence entries filtered by type correctly
+      - Demand snapshot computes total pending workloads
+      - Demand snapshot groups workloads by type
+      - Peak demand ratio calculated correctly
+      - Cost snapshot aggregates per-tier costs
+      - Budget remaining percentage computed correctly
+      - Utilization snapshot computes overall utilization
+      - Saturated tier detection threshold applied
+      - Idle tier detection threshold applied
+      - Trend computation from sequential snapshots
+      - Stability score propagated to all intelligence entries
+      - Limit parameter respected on intelligence query
+    current_state: green
+    test_count: 12
+
+  integration_tests:
+    description: End-to-end intelligence pipeline with mocked sources
+    pass_criteria:
+      - GET /launchpad/intelligence returns all entry types
+      - Intelligence type filter returns only matching entries
+      - Limit parameter caps returned results
+      - GET /launchpad/demand returns valid DemandSnapshot
+      - GET /launchpad/cost returns valid CostSnapshot
+      - GET /launchpad/utilization returns valid UtilizationSnapshot
+      - Audit trail created for intelligence refresh
+      - Kafka event published on intelligence refresh
+      - Geometric stability recorded per intelligence entry
+      - Empty state returns valid empty responses
+      - Concurrent intelligence requests handled correctly
+      - Intelligence entries persisted to DB
+    current_state: green
+    test_count: 12
+
+  kafka_events:
+    description: Launchpad events published
+    pass_criteria:
+      - launchpad.intelligence.refreshed published after aggregation cycle
+      - launchpad.demand.snapshot published on demand update
+      - launchpad.cost.snapshot published on cost update
+      - launchpad.utilization.snapshot published on utilization update
+    current_state: green
+
+  audit_trail:
+    description: All intelligence operations logged
+    pass_criteria:
+      - launchpad.intelligence.refresh audit event per cycle
+      - launchpad.snapshot.created audit event per snapshot type
+      - Source component tracked in audit records
+    current_state: green
+
+  contract:
+    description: OpenAPI specification
+    pass_criteria:
+      - OpenAPI 3.1 spec at contracts/openapi/launchpad.yaml
+      - All endpoints and schemas documented
+    current_state: green
+
+  documentation:
+    description: Operational runbook
+    pass_criteria:
+      - Runbook at runbooks/launchpad_intelligence.md
+    current_state: green
+
+promotion_gate:
+  description: All dimensions stable green
+  status: PASSED

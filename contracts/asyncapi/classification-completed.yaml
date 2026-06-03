@@ -1,0 +1,211 @@
+asyncapi: 2.6.0
+
+info:
+  title: GeoLux Classification Completed
+  version: 1.0.0
+  description: >
+    Constraint classification results emitted by the classification engine.
+    Each message carries the full classification outcome including constraint
+    evaluation results, confidence and stability scores, and a reference to
+    the evidence chain that led to the classification.
+  contact:
+    name: GeoLux Platform Team
+
+channels:
+  geolux-classification-completed:
+    description: >
+      Classification results produced after evaluating hypotheses against
+      operational constraints. Consumed by LLM-MPC, Deepfield, and the
+      Stargate dashboard.
+    bindings:
+      kafka:
+        partitions: 6
+        replicas: 3
+        topicConfiguration:
+          retention.ms: 604800000
+          cleanup.policy:
+            - delete
+    publish:
+      operationId: publishClassificationCompleted
+      summary: Classification engine publishes completed classification results.
+      message:
+        $ref: '#/components/messages/ClassificationCompleted'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+    subscribe:
+      operationId: consumeClassificationCompleted
+      summary: >
+        LLM-MPC, Deepfield, and the dashboard consume classification
+        results for action planning, routing, and visualization.
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - llm-mpc
+              - deepfield
+              - stargate-dashboard
+
+  x-ordering-guarantees:
+    description: >
+      Messages are partitioned by classification_id. All results for the same
+      classification are delivered to the same partition, preserving ordering.
+
+  x-retention-policy:
+    description: >
+      Messages are retained for 7 days (604800000 ms). After the retention
+      window, messages are eligible for deletion.
+
+components:
+  messages:
+    ClassificationCompleted:
+      name: ClassificationCompleted
+      title: Classification Completed Event
+      summary: Constraint classification result with evidence chain reference.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          partitionKey:
+            type: string
+            description: Set to classification_id for ordering guarantees.
+      payload:
+        $ref: '#/components/schemas/ClassificationCompletedPayload'
+      examples:
+        - name: ExampleClassificationCompleted
+          summary: A classification result confirming CPU throttling constraint violation.
+          headers:
+            partitionKey: cls-x9y8z7w6
+          payload:
+            classification_id: cls-x9y8z7w6
+            constraint_results:
+              - constraint_name: cpu_limit_headroom
+                violated: true
+                observed_value: 0.95
+                threshold: 0.80
+              - constraint_name: pod_restart_budget
+                violated: false
+                observed_value: 3
+                threshold: 10
+            confidence_scores:
+              overall: 0.88
+              per_constraint:
+                cpu_limit_headroom: 0.92
+                pod_restart_budget: 0.84
+            stability_scores:
+              overall: 0.90
+              per_constraint:
+                cpu_limit_headroom: 0.87
+                pod_restart_budget: 0.93
+            evidence_chain_reference: evchain-abc123def456
+            audit_record_id: audit-rec-77889900
+
+  schemas:
+    ClassificationCompletedPayload:
+      type: object
+      description: Full classification outcome with constraint evaluations.
+      required:
+        - classification_id
+        - constraint_results
+        - confidence_scores
+        - stability_scores
+        - evidence_chain_reference
+        - audit_record_id
+      properties:
+        classification_id:
+          type: string
+          description: Unique identifier for this classification run.
+          example: cls-x9y8z7w6
+        constraint_results:
+          type: array
+          description: Results of individual constraint evaluations.
+          items:
+            type: object
+            required:
+              - constraint_name
+              - violated
+              - observed_value
+              - threshold
+            properties:
+              constraint_name:
+                type: string
+                description: Name of the constraint that was evaluated.
+                example: cpu_limit_headroom
+              violated:
+                type: boolean
+                description: Whether the constraint was violated.
+                example: true
+              observed_value:
+                type: number
+                format: double
+                description: The observed metric value for this constraint.
+                example: 0.95
+              threshold:
+                type: number
+                format: double
+                description: The threshold above/below which a violation is triggered.
+                example: 0.80
+        confidence_scores:
+          type: object
+          description: >
+            Confidence scores for the overall classification and per constraint.
+          required:
+            - overall
+            - per_constraint
+          properties:
+            overall:
+              type: number
+              format: double
+              minimum: 0.0
+              maximum: 1.0
+              description: Aggregate confidence for the classification.
+              example: 0.88
+            per_constraint:
+              type: object
+              description: Per-constraint confidence scores keyed by constraint name.
+              additionalProperties:
+                type: number
+                format: double
+              example:
+                cpu_limit_headroom: 0.92
+                pod_restart_budget: 0.84
+        stability_scores:
+          type: object
+          description: >
+            Stability scores for the overall classification and per constraint.
+          required:
+            - overall
+            - per_constraint
+          properties:
+            overall:
+              type: number
+              format: double
+              minimum: 0.0
+              maximum: 1.0
+              description: Aggregate stability for the classification.
+              example: 0.90
+            per_constraint:
+              type: object
+              description: Per-constraint stability scores keyed by constraint name.
+              additionalProperties:
+                type: number
+                format: double
+              example:
+                cpu_limit_headroom: 0.87
+                pod_restart_budget: 0.93
+        evidence_chain_reference:
+          type: string
+          description: >
+            Reference ID linking to the full evidence chain that was used
+            to produce this classification.
+          example: evchain-abc123def456
+        audit_record_id:
+          type: string
+          description: >
+            Identifier for the audit record associated with this
+            classification event.
+          example: audit-rec-77889900

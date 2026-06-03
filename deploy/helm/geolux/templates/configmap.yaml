@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    app: geolux
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  GEOLUX_MODE: {{ .Values.mode | quote }}
+  GEOLUX_LITELLM_URL: {{ .Values.llm.url | quote }}
+  GEOLUX_LLM_MODEL: {{ .Values.llm.model | quote }}
+  GEOLUX_STABILITY_THRESHOLD: {{ .Values.stability.threshold | quote }}
+  GEOLUX_STABILITY_METHOD: {{ .Values.stability.method | quote }}
+  GEOLUX_MPC_HORIZON: {{ .Values.mpc.horizon | quote }}
+  GEOLUX_MPC_MAX_HORIZON: {{ .Values.mpc.maxHorizon | quote }}
+  GEOLUX_MPC_MIN_HISTORY_WEEKS: {{ .Values.mpc.minHistoryWeeks | quote }}
+  GEOLUX_KAFKA_BROKERS: {{ .Values.kafka.brokers | quote }}
+  GEOLUX_CORS_ORIGINS: {{ .Values.cors.origins | quote }}
+  GEOLUX_GAUDI_URL: {{ .Values.deepfield.gaudiUrl | quote }}
+  GEOLUX_XEON6_URL: {{ .Values.deepfield.xeon6Url | quote }}

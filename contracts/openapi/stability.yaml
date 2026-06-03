@@ -1,0 +1,131 @@
+openapi: "3.1.0"
+info:
+  title: GeoLux Geometric Stability API
+  description: Geometric stability measurement for LLM calls
+  version: "0.1.0"
+
+paths:
+  /stability/scores:
+    get:
+      operationId: getStabilityScores
+      summary: Retrieve stability score records
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: List of stability score records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StabilityScoreResponse"
+
+  /stability/thresholds:
+    get:
+      operationId: getStabilityThresholds
+      summary: Get current stability threshold configuration
+      responses:
+        "200":
+          description: Current threshold
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StabilityThresholdResponse"
+    put:
+      operationId: updateStabilityThresholds
+      summary: Update stability threshold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StabilityThresholdUpdate"
+      responses:
+        "200":
+          description: Updated threshold
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StabilityThresholdResponse"
+        "400":
+          description: Invalid threshold value
+
+components:
+  schemas:
+    StabilityScoreResponse:
+      type: object
+      required:
+        - call_id
+        - endpoint
+        - model
+        - stability_score
+        - stability_method
+        - stability_threshold
+        - stability_state
+        - created_at
+      properties:
+        call_id:
+          type: string
+          format: uuid
+        endpoint:
+          type: string
+        model:
+          type: string
+        stability_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        stability_method:
+          type: string
+          enum:
+            - activation_variance
+            - token_probability
+            - perplexity
+            - logit_entropy
+        stability_threshold:
+          type: number
+          format: float
+        stability_state:
+          type: string
+          enum:
+            - stable_pass
+            - unstable_pass
+            - stable_fail
+            - unstable_fail
+        created_at:
+          type: string
+          format: date-time
+
+    StabilityThresholdResponse:
+      type: object
+      required:
+        - stability_threshold
+      properties:
+        stability_threshold:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+
+    StabilityThresholdUpdate:
+      type: object
+      required:
+        - threshold
+      properties:
+        threshold:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0

@@ -1,0 +1,114 @@
+id: hypothesis-engine
+version: v0.1.0
+component: hypothesis-engine
+description: >
+  EDD rubric matrix for the Hypothesis Engine (THE).
+  Replaces LLM-as-decision-maker with LLM-as-hypothesis-generator.
+
+theoretical_grounding:
+  - Computational Irreducibility: replaces prediction with structured falsifiable inquiry
+  - Geometric State Theory: stability scores weight hypothesis ranking
+
+evaluation_dimensions:
+  schema:
+    description: Hypotheses table with all columns per spec
+    pass_criteria:
+      - glx_hypotheses table exists with all columns
+      - Indices on stability_score and validation_outcome
+      - Foreign key to audit_events via audit_record_id
+    current_state: green
+
+  unit_tests:
+    description: Core logic tests for generation, ranking, validation, parsing
+    pass_criteria:
+      - rank_hypotheses() sorts by stability then confidence
+      - validate_hypothesis() handles all 7 operators deterministically
+      - _parse_hypotheses() handles JSON array, code-fenced, dict, invalid
+      - _normalize_hypothesis() filters invalid conditions
+    current_state: green
+    test_count: 31
+
+  integration_tests:
+    description: End-to-end flow with mocked LLM
+    pass_criteria:
+      - Generate from evidence bundle, persist to DB
+      - Instability gate blocks generation
+      - LLM unavailable returns stale hypotheses
+      - Evidence snapshot stored with each hypothesis
+      - Audit trail created for all operations
+      - Validation updates DB correctly
+      - All-falsified detection triggers rubric extension
+    current_state: green
+    test_count: 14
+
+  bdd_scenarios:
+    description: Behavioral specifications
+    pass_criteria:
+      - Generate hypotheses from evidence bundle
+      - Validate/falsify/inconclusive scenarios
+      - Parse JSON array, code-fenced, and invalid responses
+    current_state: green
+    scenario_count: 7
+
+  pdd_invariants:
+    description: Property-based invariants
+    pass_criteria:
+      - Ranking preserves all elements
+      - Ranking is sorted descending by (stability, confidence)
+      - Ranking is deterministic and idempotent
+      - Validation always returns valid outcome
+      - Validation is deterministic
+      - Empty conditions always inconclusive
+    current_state: green
+    test_count: 8
+
+  geometric_stability:
+    description: All LLM calls measure and store stability
+    pass_criteria:
+      - StabilityAwareLLMClient used for hypothesis generation
+      - Stability score stored with each hypothesis
+      - Instability gate enforced (below threshold = no generation)
+    current_state: green
+
+  kafka_events:
+    description: Significant state changes published
+    pass_criteria:
+      - hypothesis.generated event published on generation
+      - audit.event published on instability gate
+      - audit.event published on all-falsified
+    current_state: green
+
+  audit_trail:
+    description: All operations logged
+    pass_criteria:
+      - hypothesis.generation.started audit event
+      - hypothesis.generation.gated audit event (when gated)
+      - hypothesis.all_falsified audit event
+      - Each hypothesis has audit_record_id
+    current_state: green
+
+  graceful_degradation:
+    description: Handles LLM and dependency failures
+    pass_criteria:
+      - LLM unavailable: return stale hypotheses with flag
+      - Instability: gate generation, log, escalate
+      - Invalid LLM response: return empty list, no crash
+    current_state: green
+
+  contract:
+    description: OpenAPI specification
+    pass_criteria:
+      - OpenAPI 3.1 spec at contracts/openapi/hypothesis.yaml
+      - All endpoints, request/response schemas documented
+    current_state: green
+
+  documentation:
+    description: Operational runbook
+    pass_criteria:
+      - Runbook at runbooks/hypothesis_queue_exhausted.md
+      - Covers investigation, remediation, escalation
+    current_state: green
+
+promotion_gate:
+  description: All dimensions stable green
+  status: PASSED

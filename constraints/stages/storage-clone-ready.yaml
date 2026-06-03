@@ -1,0 +1,39 @@
+stage: storage-clone-ready
+version: 1
+constraints:
+  - constraint_id: sc-001
+    constraint_name: PVC clone exists and is bound
+    assertion_type: boolean
+    assertion_definition:
+      field: pvc_bound
+      value: true
+    evidence_requirements:
+      - pvc_bound
+    severity: critical
+    remediation_class: rebind_pvc_clone
+    geometric_stability_weight: 0.3
+
+  - constraint_id: sc-002
+    constraint_name: Clone capacity sufficient
+    assertion_type: range
+    assertion_definition:
+      field: clone_capacity_gi
+      min: 10
+      max: 500
+    evidence_requirements:
+      - clone_capacity_gi
+    severity: major
+    remediation_class: resize_storage_clone
+    geometric_stability_weight: 0.3
+
+  - constraint_id: sc-003
+    constraint_name: Clone data integrity verified
+    assertion_type: boolean
+    assertion_definition:
+      field: clone_integrity_ok
+      value: true
+    evidence_requirements:
+      - clone_integrity_ok
+    severity: critical
+    remediation_class: reclone_storage_volume
+    geometric_stability_weight: 0.5

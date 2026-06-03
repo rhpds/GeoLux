@@ -1,0 +1,137 @@
+id: deepfield-nanoobs
+version: v0.1.0
+component: deepfield-router
+description: >
+  EDD rubric matrix for the Deepfield Router and NanoObs observability layer.
+  Substrate-aware workload routing with tiered fallback and distributed tracing.
+
+theoretical_grounding:
+  - Computational Irreducibility: tiered routing adapts to substrate availability without global prediction
+  - Geometric State Theory: stability-aware routing decisions with fallback chain audit
+
+evaluation_dimensions:
+  schema:
+    description: Routing decisions and tier definitions tables
+    pass_criteria:
+      - glx_deepfield_routing_decisions table with all columns
+      - glx_deepfield_tiers table with health and capacity tracking
+      - Fallback chain stored as JSON array per decision
+    current_state: green
+
+  unit_tests:
+    description: Core router and tier selection logic tests
+    pass_criteria:
+      - Tier selection picks highest-priority healthy tier
+      - Fallback chain traversal on primary unavailability
+      - Preferred tier override respected when healthy
+      - Preferred tier ignored when unhealthy, falls back
+      - Compute profile matching against tier capabilities
+      - Constraint filtering by geo_region and data_residency
+      - Cost ceiling enforcement
+      - NanoObs trace ID attached to every routing decision
+      - Stability score propagated from routing LLM call
+      - Unhealthy tier excluded from candidate set
+      - All-tiers-unhealthy returns 503
+      - Capacity-exhausted tier deprioritized
+      - Accelerator hint narrows tier candidates
+      - Latency ceiling filters out slow tiers
+      - Routing decision persisted correctly
+      - Fallback flag set correctly on non-primary selection
+      - Kafka event emitted on fallback
+    current_state: green
+    test_count: 17
+
+  integration_tests:
+    description: End-to-end routing with mocked substrates
+    pass_criteria:
+      - Route request produces valid RouteResponse
+      - Fallback triggered when primary tier is down
+      - Routing history returned filtered by workload_id
+      - Tier definitions endpoint returns all tiers
+      - Audit trail created for routing decisions
+      - Audit trail created for fallback events
+      - NanoObs trace persisted with routing decision
+      - Geometric stability recorded per route
+      - 503 returned when all tiers unhealthy
+      - Preferred tier override routes correctly
+      - Capacity-exhausted tier triggers fallback
+      - Constraint violation returns 400
+      - Routing decision persisted to DB
+      - Kafka fallback event published
+      - Health recovery re-enables tier
+      - Concurrent routing requests handled correctly
+      - Routing history respects limit parameter
+    current_state: green
+    test_count: 17
+
+  bdd_scenarios:
+    description: Behavioral specifications
+    pass_criteria:
+      - Workload routes to highest-priority healthy tier
+      - Fallback activates when primary is unhealthy
+      - All tiers down yields 503 with empty fallback chain
+      - Preferred tier override bypasses priority ordering
+      - Recovery of primary tier restores normal routing
+      - NanoObs trace attached to every decision
+    current_state: green
+    scenario_count: 6
+
+  pdd_invariants:
+    description: Property-based invariants
+    pass_criteria:
+      - Selected tier is always healthy at decision time
+      - Fallback chain contains only tiers attempted before selection
+      - Routing decision always includes a geometric stability score
+      - Stability score is between 0.0 and 1.0 inclusive
+      - Priority ordering is deterministic for identical inputs
+    current_state: green
+    test_count: 5
+
+  geometric_stability:
+    description: Routing decisions use stability-aware LLM
+    pass_criteria:
+      - StabilityAwareLLMClient used for routing optimization calls
+      - Stability scores stored per routing decision
+      - Unstable routing calls trigger conservative tier selection
+      - Sustained instability escalates to operator
+    current_state: green
+
+  kafka_events:
+    description: Deepfield events published
+    pass_criteria:
+      - deepfield.routing.completed published after every route
+      - deepfield.routing.fallback published on fallback activation
+    current_state: green
+
+  audit_trail:
+    description: All routing operations logged
+    pass_criteria:
+      - deepfield.route.decision audit event per routing call
+      - deepfield.route.fallback audit event on fallback
+      - NanoObs trace ID linked in audit records
+    current_state: green
+
+  graceful_degradation:
+    description: Handles failures gracefully
+    pass_criteria:
+      - Substrate unavailability triggers fallback, no crash
+      - All tiers down returns 503 with structured error
+      - LLM failure for stability check defaults to conservative tier
+      - Constraint violations return 400 with detail
+    current_state: green
+
+  contract:
+    description: OpenAPI specification
+    pass_criteria:
+      - OpenAPI 3.1 spec at contracts/openapi/deepfield.yaml
+    current_state: green
+
+  documentation:
+    description: Operational runbook
+    pass_criteria:
+      - Runbook at runbooks/deepfield_routing_fallback.md
+    current_state: green
+
+promotion_gate:
+  description: All dimensions stable green
+  status: PASSED

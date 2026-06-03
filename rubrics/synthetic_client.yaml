@@ -1,0 +1,105 @@
+id: synthetic-client
+version: v0.1.0
+component: synthetic-client-replay
+description: >
+  EDD rubric matrix for the Synthetic Client and Scenario Replay engine.
+  Scenario-driven workload generation with replay and live/shadow/replay mode switching.
+
+theoretical_grounding:
+  - Computational Irreducibility: synthetic scenarios probe system behavior under controlled conditions
+  - Geometric State Theory: stability measured across generated workloads and replay fidelity
+
+evaluation_dimensions:
+  schema:
+    description: Scenario definitions, runs, replay sessions, and mode state tables
+    pass_criteria:
+      - glx_scenario_definitions table with workload profiles
+      - glx_scenario_runs table with run results and stability fields
+      - glx_replay_sessions table with progress and state tracking
+      - glx_mode_state table with mode transitions
+    current_state: green
+
+  unit_tests:
+    description: Scenario execution, replay, and mode switching logic tests
+    pass_criteria:
+      - Scenario run generates correct number of workloads
+      - Workload profile shapes applied (steady_state, burst, ramp_up, ramp_down, chaos, spike)
+      - Override parameters merged with scenario defaults
+      - Record replay flag creates replay recording
+      - Replay speed multiplier applied to timing
+      - Replay pause preserves progress state
+      - Replay resume continues from paused position
+      - Mode transition from live to shadow accepted
+      - Mode transition from shadow to replay accepted
+      - Invalid mode transition rejected
+      - Stability score aggregated across generated workloads
+      - Run status computed from workload outcomes
+      - Failed workloads counted correctly
+      - Latency statistics computed correctly
+    current_state: green
+    test_count: 14
+
+  integration_tests:
+    description: End-to-end scenario and replay with mocked substrates
+    pass_criteria:
+      - GET /scenarios/list returns all definitions
+      - POST /scenarios/run executes scenario and returns result
+      - Scenario run with record_replay creates recording
+      - POST /scenarios/replay/start begins replay
+      - POST /scenarios/replay/pause pauses active replay
+      - Replay start with no active session returns 409 on pause
+      - GET /mode returns current operating mode
+      - PUT /mode switches mode and returns updated state
+      - Invalid mode transition returns 400
+      - Audit trail created for scenario run
+      - Audit trail created for replay start and pause
+      - Audit trail created for mode transitions
+      - Kafka events published for scenario completion
+      - Kafka events published for mode switches
+      - Geometric stability recorded per scenario run
+      - Scenario run persisted to DB
+      - Replay session persisted to DB
+      - Concurrent scenario runs handled correctly
+      - Unknown scenario_id returns 404
+    current_state: green
+    test_count: 19
+
+  bdd_scenarios:
+    description: Behavioral specifications
+    pass_criteria:
+      - Steady-state scenario generates uniform workload distribution
+      - Burst scenario generates concentrated spike
+      - Replay reproduces recorded workload sequence
+      - Pause and resume preserves replay position
+      - Mode switch from live to shadow disables side effects
+      - Mode switch from shadow to replay enables replay-only path
+    current_state: green
+    scenario_count: 6
+
+  mode_support:
+    description: Live, shadow, and replay mode handling
+    pass_criteria:
+      - Live mode routes workloads to real substrates
+      - Shadow mode routes workloads without side effects
+      - Replay mode replays recorded sessions only
+      - Mode state persisted across restarts
+      - Mode transition emits Kafka event
+      - Previous mode tracked in mode response
+    current_state: green
+
+  contract:
+    description: OpenAPI specification
+    pass_criteria:
+      - OpenAPI 3.1 spec at contracts/openapi/scenarios.yaml
+      - All endpoints and schemas documented
+    current_state: green
+
+  documentation:
+    description: Operational runbook
+    pass_criteria:
+      - Runbook at runbooks/synthetic_client_replay.md
+    current_state: green
+
+promotion_gate:
+  description: All dimensions stable green
+  status: PASSED

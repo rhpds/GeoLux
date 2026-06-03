@@ -1,0 +1,210 @@
+openapi: "3.1.0"
+info:
+  title: GeoLux Deepfield Router API
+  description: Substrate-aware workload routing with tiered fallback (Deepfield + NanoObs)
+  version: "0.1.0"
+
+paths:
+  /deepfield/route:
+    post:
+      operationId: routeWorkload
+      summary: Route a workload to the optimal substrate tier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteRequest"
+      responses:
+        "200":
+          description: Routing decision returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteResponse"
+        "400":
+          description: Invalid route request
+        "503":
+          description: All substrate tiers unavailable
+
+  /deepfield/tiers:
+    get:
+      operationId: getTierDefinitions
+      summary: Get current substrate tier definitions
+      responses:
+        "200":
+          description: List of tier definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TierDefinition"
+
+  /deepfield/routing-history:
+    get:
+      operationId: getRoutingHistory
+      summary: Retrieve routing decision history
+      parameters:
+        - name: workload_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: List of routing decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RouteResponse"
+
+components:
+  schemas:
+    RouteRequest:
+      type: object
+      required:
+        - workload_id
+        - workload_type
+        - compute_profile
+      properties:
+        workload_id:
+          type: string
+          format: uuid
+        workload_type:
+          type: string
+          enum:
+            - inference
+            - training
+            - fine_tuning
+            - batch_prediction
+        compute_profile:
+          $ref: "#/components/schemas/ComputeProfile"
+        preferred_tier:
+          type: string
+          nullable: true
+        constraints:
+          $ref: "#/components/schemas/RoutingConstraints"
+
+    ComputeProfile:
+      type: object
+      required:
+        - flops_required
+        - memory_gb
+        - latency_ceiling_ms
+      properties:
+        flops_required:
+          type: number
+          format: float
+        memory_gb:
+          type: number
+          format: float
+        latency_ceiling_ms:
+          type: integer
+        accelerator_hint:
+          type: string
+          enum:
+            - gaudi
+            - xeon6
+            - any
+          default: any
+
+    RoutingConstraints:
+      type: object
+      properties:
+        geo_region:
+          type: string
+        data_residency:
+          type: string
+        max_cost_per_hour:
+          type: number
+          format: float
+
+    RouteResponse:
+      type: object
+      required:
+        - routing_id
+        - workload_id
+        - selected_tier
+        - substrate_endpoint
+        - fallback_used
+        - geometric_stability_score
+        - geometric_stability_state
+        - created_at
+      properties:
+        routing_id:
+          type: string
+          format: uuid
+        workload_id:
+          type: string
+          format: uuid
+        selected_tier:
+          type: string
+        substrate_endpoint:
+          type: string
+          format: uri
+        fallback_used:
+          type: boolean
+        fallback_chain:
+          type: array
+          items:
+            type: string
+        geometric_stability_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        geometric_stability_state:
+          type: string
+          enum:
+            - stable_pass
+            - unstable_pass
+            - stable_fail
+            - unstable_fail
+        nanoobs_trace_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    TierDefinition:
+      type: object
+      required:
+        - tier_name
+        - substrate_type
+        - priority
+        - endpoint
+        - healthy
+      properties:
+        tier_name:
+          type: string
+        substrate_type:
+          type: string
+          enum:
+            - gaudi
+            - xeon6
+            - cpu_fallback
+        priority:
+          type: integer
+          minimum: 0
+        endpoint:
+          type: string
+          format: uri
+        healthy:
+          type: boolean
+        capacity_remaining_pct:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 100.0
+        max_latency_ms:
+          type: integer

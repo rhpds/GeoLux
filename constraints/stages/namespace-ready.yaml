@@ -1,0 +1,39 @@
+stage: namespace-ready
+version: 1
+constraints:
+  - constraint_id: nr-001
+    constraint_name: Namespace exists
+    assertion_type: boolean
+    assertion_definition:
+      field: namespace_exists
+      value: true
+    evidence_requirements:
+      - namespace_exists
+    severity: critical
+    remediation_class: create_namespace
+    geometric_stability_weight: 0.3
+
+  - constraint_id: nr-002
+    constraint_name: Namespace phase active
+    assertion_type: boolean
+    assertion_definition:
+      field: namespace_active
+      value: true
+    evidence_requirements:
+      - namespace_active
+    severity: critical
+    remediation_class: check_namespace_status
+    geometric_stability_weight: 0.3
+
+  - constraint_id: nr-003
+    constraint_name: Resource quotas within limits
+    assertion_type: threshold
+    assertion_definition:
+      field: quota_usage_percent
+      operator: lte
+      value: 95
+    evidence_requirements:
+      - quota_usage_percent
+    severity: major
+    remediation_class: adjust_resource_quotas
+    geometric_stability_weight: 0.3

@@ -1,0 +1,39 @@
+stage: run-created
+version: 1
+constraints:
+  - constraint_id: rc-001
+    constraint_name: Run object created
+    assertion_type: boolean
+    assertion_definition:
+      field: run_exists
+      value: true
+    evidence_requirements:
+      - run_exists
+    severity: critical
+    remediation_class: initiate_run_creation
+    geometric_stability_weight: 0.3
+
+  - constraint_id: rc-002
+    constraint_name: Run state is provisioning or later
+    assertion_type: pattern
+    assertion_definition:
+      field: run_state
+      pattern: "^(provisioning|running|completed)$"
+    evidence_requirements:
+      - run_state
+    severity: critical
+    remediation_class: check_run_lifecycle
+    geometric_stability_weight: 0.5
+
+  - constraint_id: rc-003
+    constraint_name: Lab user count within capacity
+    assertion_type: threshold
+    assertion_definition:
+      field: assigned_user_count
+      operator: lte
+      value: 200
+    evidence_requirements:
+      - assigned_user_count
+    severity: major
+    remediation_class: scale_lab_capacity
+    geometric_stability_weight: 0.3

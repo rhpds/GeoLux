@@ -1,0 +1,235 @@
+openapi: "3.1.0"
+info:
+  title: GeoLux Launchpad Intelligence API
+  description: Aggregated operational intelligence views for demand, cost, and utilization
+  version: "0.1.0"
+
+paths:
+  /launchpad/intelligence:
+    get:
+      operationId: getIntelligence
+      summary: Retrieve aggregated intelligence entries
+      parameters:
+        - name: intelligence_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - demand
+              - cost
+              - utilization
+              - anomaly
+              - forecast
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: List of intelligence entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IntelligenceEntry"
+
+  /launchpad/demand:
+    get:
+      operationId: getDemandIntelligence
+      summary: Retrieve current demand intelligence
+      responses:
+        "200":
+          description: Demand intelligence snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemandSnapshot"
+
+  /launchpad/cost:
+    get:
+      operationId: getCostIntelligence
+      summary: Retrieve current cost intelligence
+      responses:
+        "200":
+          description: Cost intelligence snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostSnapshot"
+
+  /launchpad/utilization:
+    get:
+      operationId: getUtilizationIntelligence
+      summary: Retrieve current utilization intelligence
+      responses:
+        "200":
+          description: Utilization intelligence snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UtilizationSnapshot"
+
+components:
+  schemas:
+    IntelligenceEntry:
+      type: object
+      required:
+        - entry_id
+        - intelligence_type
+        - payload
+        - geometric_stability_score
+        - geometric_stability_state
+        - created_at
+      properties:
+        entry_id:
+          type: string
+          format: uuid
+        intelligence_type:
+          type: string
+          enum:
+            - demand
+            - cost
+            - utilization
+            - anomaly
+            - forecast
+        payload:
+          type: object
+        geometric_stability_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        geometric_stability_state:
+          type: string
+          enum:
+            - stable_pass
+            - unstable_pass
+            - stable_fail
+            - unstable_fail
+        source_component:
+          type: string
+        audit_record_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    DemandSnapshot:
+      type: object
+      required:
+        - snapshot_id
+        - total_pending_workloads
+        - workloads_by_type
+        - peak_demand_ratio
+        - created_at
+      properties:
+        snapshot_id:
+          type: string
+          format: uuid
+        total_pending_workloads:
+          type: integer
+        workloads_by_type:
+          type: object
+          additionalProperties:
+            type: integer
+        peak_demand_ratio:
+          type: number
+          format: float
+          minimum: 0.0
+        trend:
+          type: string
+          enum:
+            - increasing
+            - stable
+            - decreasing
+        geometric_stability_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        created_at:
+          type: string
+          format: date-time
+
+    CostSnapshot:
+      type: object
+      required:
+        - snapshot_id
+        - total_cost_per_hour
+        - cost_by_tier
+        - budget_remaining_pct
+        - created_at
+      properties:
+        snapshot_id:
+          type: string
+          format: uuid
+        total_cost_per_hour:
+          type: number
+          format: float
+        cost_by_tier:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+        budget_remaining_pct:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 100.0
+        cost_trend:
+          type: string
+          enum:
+            - increasing
+            - stable
+            - decreasing
+        geometric_stability_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        created_at:
+          type: string
+          format: date-time
+
+    UtilizationSnapshot:
+      type: object
+      required:
+        - snapshot_id
+        - overall_utilization_pct
+        - utilization_by_tier
+        - created_at
+      properties:
+        snapshot_id:
+          type: string
+          format: uuid
+        overall_utilization_pct:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 100.0
+        utilization_by_tier:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+        saturated_tiers:
+          type: array
+          items:
+            type: string
+        idle_tiers:
+          type: array
+          items:
+            type: string
+        geometric_stability_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        created_at:
+          type: string
+          format: date-time

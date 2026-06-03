@@ -1,0 +1,113 @@
+id: geometric-stability
+version: v0.1.0
+component: geometric-stability-infrastructure
+description: >
+  EDD rubric matrix for the geometric stability measurement infrastructure.
+  All dimensions must show stable green before Phase 1 gate passes.
+
+theoretical_grounding:
+  - Geometric State Theory: LLM probability manifold stability is measurable
+  - Computational Irreducibility: stability signals inform bounded validation
+
+evaluation_dimensions:
+  schema:
+    description: Database tables and migrations for stability records
+    pass_criteria:
+      - glx_llm_stability_records table exists with all columns
+      - Alembic migration runs clean on empty database
+      - Stability enum types created correctly
+    current_state: green
+
+  unit_tests:
+    description: Unit tests for all measurement functions
+    pass_criteria:
+      - Tests for token_probability_variance method
+      - Tests for logit_entropy method
+      - Tests for perplexity method
+      - Tests for stability_score computation
+      - Tests for stability_state determination (all 4 states)
+      - Score always in [0.0, 1.0] range
+    current_state: green
+    test_count: 25
+
+  integration_tests:
+    description: End-to-end flow through wrapper, DB, and API
+    pass_criteria:
+      - StabilityAwareLLMClient intercepts calls and computes stability
+      - Stability records persisted to database
+      - API endpoints return correct data
+      - All four stability states producible and persisted
+      - LLM failure gracefully handled
+    current_state: green
+    test_count: 13
+
+  bdd_scenarios:
+    description: Behavioral specifications for stability measurement
+    pass_criteria:
+      - Stable LLM call → stable_pass scenario passes
+      - Unstable LLM call → unstable_pass scenario passes
+      - Stable incorrect → stable_fail scenario passes
+      - Unstable incorrect → unstable_fail scenario passes
+      - Missing logprobs → default score scenario passes
+      - Threshold update scenarios pass
+    current_state: green
+    scenario_count: 7
+
+  pdd_invariants:
+    description: Property-based invariants verified via Hypothesis
+    pass_criteria:
+      - stability_score always in [0.0, 1.0] for any logprobs input
+      - stability_state determination is deterministic for same inputs
+      - correct output never produces fail state
+      - incorrect output never produces pass state
+      - above threshold always stable, below always unstable
+      - normalization always in [0.0, 1.0]
+    current_state: green
+    test_count: 12
+    max_examples: 200
+
+  contract:
+    description: OpenAPI specification matches implementation
+    pass_criteria:
+      - OpenAPI 3.1 spec exists at contracts/openapi/stability.yaml
+      - All endpoints documented with request/response schemas
+      - Stability state enum values match implementation
+    current_state: green
+
+  audit_trail:
+    description: Stability events create audit records
+    pass_criteria:
+      - Every stability measurement stored in glx_llm_stability_records
+      - raw_signal field contains measurement metadata
+      - Records retrievable via API
+    current_state: green
+
+  graceful_degradation:
+    description: Component handles LLM failures gracefully
+    pass_criteria:
+      - LLM unavailable returns unstable_fail with score 0.0
+      - Error message included in response
+      - No crash or unhandled exception
+    current_state: green
+
+  documentation:
+    description: Operational runbook for instability events
+    pass_criteria:
+      - Runbook exists at runbooks/geometric_instability_event.md
+      - Covers investigation steps, remediation, escalation
+    current_state: green
+
+promotion_gate:
+  description: >
+    All dimensions must be green. Unstable passes (flaky tests) are not
+    acceptable for gate promotion.
+  status: PASSED
+  gate_passed_at: "2026-06-02"
+
+known_hard_dimensions:
+  - name: integration_tests
+    reason: >
+      Mocking LLM responses with realistic logprobs requires careful
+      construction of mock objects. Token probability variance scale
+      factor needed calibration to produce meaningful scores from
+      logprob-space values.

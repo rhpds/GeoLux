@@ -1,0 +1,39 @@
+stage: route-ready
+version: 1
+constraints:
+  - constraint_id: rr-001
+    constraint_name: Route exists
+    assertion_type: boolean
+    assertion_definition:
+      field: route_exists
+      value: true
+    evidence_requirements:
+      - route_exists
+    severity: critical
+    remediation_class: create_route
+    geometric_stability_weight: 0.3
+
+  - constraint_id: rr-002
+    constraint_name: Route responds with 2xx
+    assertion_type: range
+    assertion_definition:
+      field: route_status_code
+      min: 200
+      max: 299
+    evidence_requirements:
+      - route_status_code
+    severity: major
+    remediation_class: check_route_backend
+    geometric_stability_weight: 0.3
+
+  - constraint_id: rr-003
+    constraint_name: TLS certificate valid
+    assertion_type: boolean
+    assertion_definition:
+      field: tls_valid
+      value: true
+    evidence_requirements:
+      - tls_valid
+    severity: major
+    remediation_class: renew_certificate
+    geometric_stability_weight: 0.3
