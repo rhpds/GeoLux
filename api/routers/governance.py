@@ -149,6 +149,14 @@ def _get_top_failure_classes(db: Session) -> list:
 def _get_cluster_stats(db: Session) -> list:
     try:
         rows = db.execute(text("SELECT cluster_name, total_evaluations, passed, failed, health_rate, labs_seen, labs_failing FROM mv_cluster_summary ORDER BY total_evaluations DESC")).fetchall()
-        return [{"name": r[0], "evaluations": r[1], "passed": r[2], "failed": r[3], "health_rate": float(r[4] or 0), "labs_seen": r[5], "labs_failing": r[6]} for r in rows]
+        return [{
+            "name": r[0],
+            "evaluations": r[1],
+            "passed": r[2],
+            "failed": r[3],
+            "health_rate": round((r[2] / max(r[1], 1)) * 100, 1),
+            "labs_seen": r[5],
+            "labs_failing": r[6],
+        } for r in rows]
     except Exception:
         return []
