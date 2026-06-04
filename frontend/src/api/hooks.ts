@@ -37,6 +37,14 @@ export function useHypothesisQueue(limit = 50) {
   return useQuery({ queryKey: ['hypothesis-queue', limit], queryFn: () => geolux.getHypothesisQueue(limit), refetchInterval: 15_000 });
 }
 
+export function useMPCCycle(cycleId: string) {
+  return useQuery({ queryKey: ['mpc-cycle', cycleId], queryFn: () => geolux.getMPCCycle(cycleId), enabled: !!cycleId });
+}
+
+export function useRecentClassifications(stage?: string, limit = 20) {
+  return useQuery({ queryKey: ['recent-classifications', stage, limit], queryFn: () => geolux.getRecentClassifications(stage, limit), refetchInterval: 15_000 });
+}
+
 export function useHypothesis(id: string) {
   return useQuery({ queryKey: ['hypothesis', id], queryFn: () => geolux.getHypothesis(id), enabled: !!id });
 }
@@ -71,6 +79,10 @@ export function useCostAttribution() {
 
 export function useUtilization() {
   return useQuery({ queryKey: ['utilization'], queryFn: geolux.getUtilization, refetchInterval: 60_000 });
+}
+
+export function useGovernancePipeline() {
+  return useQuery({ queryKey: ['governance-pipeline'], queryFn: geolux.getGovernancePipeline, refetchInterval: 30_000 });
 }
 
 export function useScenarios() {

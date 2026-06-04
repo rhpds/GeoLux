@@ -233,3 +233,46 @@ def _extract_max_confidence(root_causes: list) -> float:
         return 0.0
     scores = [confidence_map.get(rc.get("confidence", "low"), 0.3) for rc in root_causes]
     return max(scores)
+
+
+def _handle_deepfield_finding(message: dict):
+    """Process DeepField findings for cross-system hypothesis generation."""
+    payload = message.get("payload", message)
+    logger.info(
+        "DeepField finding: %s severity=%s",
+        payload.get("summary", payload.get("title", "unknown"))[:60],
+        payload.get("severity", "?"),
+    )
+    try:
+        from api.routers.integration import StarGateEvent, process_stargate_event
+        from db.database import get_db
+        db = next(get_db())
+        event = StarGateEvent(
+            source="deepfield-kafka",
+            event_type="deepfield.finding",
+            payload={
+                "run_id": payload.get("id", payload.get("finding_id", "")),
+                "stage_id": "cross-system",
+                "cluster": payload.get("cluster_id", payload.get("cluster", "")),
+                "outcome": "fail" if payload.get("severity") in ("high", "critical") else "warn",
+                "failure_class": payload.get("category", payload.get("signal_type", "")),
+                "message": payload.get("summary", payload.get("title", "")),
+            },
+        )
+        process_stargate_event(event, db)
+        db.close()
+    except Exception as e:
+        logger.debug("DeepField finding handler error: %s", e)
+
+
+def _handle_deepfield_incident(message: dict):
+    """Process DeepField incidents — high-severity cross-system events."""
+    payload = message.get("payload", message)
+    logger.info("DeepField incident: %s", payload.get("summary", "unknown")[:60])
+
+
+def _handle_launchpad_lifecycle(message: dict):
+    """Process Launchpad lifecycle events — session creation/completion/failure."""
+    payload = message.get("payload", message)
+    event_type = payload.get("event_type", payload.get("type", "unknown"))
+    logger.info("Launchpad lifecycle: %s session=%s", event_type, payload.get("session_id", "?")[:20])

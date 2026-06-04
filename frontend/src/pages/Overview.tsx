@@ -1,9 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import MetricCard from '../components/MetricCard';
 import SectionHeader from '../components/SectionHeader';
 import StabilityMonitor from '../components/StabilityMonitor';
 import { useHypothesisQueue, useMPCCycles, useRoutingHistory, useConstraints } from '../api/hooks';
 
 export default function Overview() {
+  const navigate = useNavigate();
   const hypotheses = useHypothesisQueue(10);
   const cycles = useMPCCycles(undefined, 10);
   const routing = useRoutingHistory(10);
@@ -22,10 +24,18 @@ export default function Overview() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Hypotheses (queue)" value={hypCount} />
-        <MetricCard label="Constraints" value={constraintCount} />
-        <MetricCard label="MPC Cycles" value={cycleCount} sub="recent" />
-        <MetricCard label="Routing Decisions" value={routeCount} sub="recent" />
+        <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/hypotheses')}>
+          <MetricCard label="Hypotheses (queue)" value={hypCount} />
+        </div>
+        <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/classification')}>
+          <MetricCard label="Constraints" value={constraintCount} />
+        </div>
+        <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/mpc')}>
+          <MetricCard label="MPC Cycles" value={cycleCount} sub="recent" />
+        </div>
+        <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/hardware')}>
+          <MetricCard label="Routing Decisions" value={routeCount} sub="recent" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -38,7 +48,7 @@ export default function Overview() {
           ) : (
             <div className="space-y-2">
               {hypotheses.data?.hypotheses.slice(0, 5).map(h => (
-                <div key={h.hypothesis_id} className="text-sm text-white truncate">
+                <div key={h.hypothesis_id} className="text-sm text-white truncate cursor-pointer hover:text-white" onClick={() => navigate(`/hypotheses/${h.hypothesis_id}`)}>
                   {h.claim}
                   <span className="text-brand-muted ml-2">{h.geometric_stability_score.toFixed(2)}</span>
                 </div>
@@ -56,7 +66,7 @@ export default function Overview() {
           ) : (
             <div className="space-y-2">
               {cycles.data?.slice(0, 5).map(c => (
-                <div key={c.cycle_id} className="flex justify-between text-sm">
+                <div key={c.cycle_id} className="flex justify-between text-sm cursor-pointer hover:text-white" onClick={() => navigate(`/mpc/cycles/${c.cycle_id}`)}>
                   <span className="text-white">{c.cluster_id}</span>
                   <span className="text-brand-muted">H={c.horizon} {c.suspended ? '(suspended)' : ''}</span>
                 </div>

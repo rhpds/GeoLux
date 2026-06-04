@@ -96,6 +96,20 @@ def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResu
             else:
                 error = f"hypothesis: {e}"
 
+    if classification_result == "fail" and cluster_id and cluster_id != "unknown":
+        try:
+            from engine.mpc import MPCController
+            from engine.objectives import get_objective
+            controller = MPCController()
+            if controller.check_activation_gate(cluster_id, db):
+                controller.plan({
+                    "cluster_id": cluster_id,
+                    "current_state": evidence_fields,
+                    "objective": get_objective(cluster_id) or {"type": "health_target"},
+                }, db)
+        except Exception:
+            pass
+
     logger.info(
         "Processed event %s: %s/%s → classification=%s, hypotheses=%d",
         event_id, cluster_id, stage_id, classification_result, hypotheses_count,

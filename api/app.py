@@ -116,6 +116,44 @@ def _retention_loop():
         _shutdown_event.wait(86400)
 
 
+def _backfill_loop():
+    """Background thread: one-time backfill of Stargate historical data, then daily incremental."""
+    import time as _t
+    _t.sleep(60)
+    lgr = logging.getLogger("geolux.backfill")
+    while not _shutdown_event.is_set():
+        try:
+            from db.database import get_db
+            from engine.miners import EvaluationMiner, LabSummaryMiner, ClusterSummaryMiner
+            db = next(get_db())
+            result = EvaluationMiner(batch_size=200, pause_ms=100).run(db, days=7, max_batches=20)
+            lgr.info("Evaluation backfill: %s", result)
+            LabSummaryMiner().run(db)
+            ClusterSummaryMiner().run(db)
+            db.close()
+        except Exception as e:
+            lgr.debug("Backfill failed: %s", e)
+        _shutdown_event.wait(86400)
+
+
+def _catalog_mining_loop():
+    """Background thread: mine Launchpad catalog every hour."""
+    import time as _t
+    _t.sleep(120)
+    lgr = logging.getLogger("geolux.catalog")
+    while not _shutdown_event.is_set():
+        try:
+            from db.database import get_db
+            from engine.catalog_miner import mine_catalog
+            db = next(get_db())
+            result = mine_catalog(db)
+            lgr.info("Catalog mined: %s", result)
+            db.close()
+        except Exception as e:
+            lgr.debug("Catalog mining failed: %s", e)
+        _shutdown_event.wait(3600)
+
+
 def _launchpad_refresh_loop():
     """Background thread: fetch RHDP data from Stargate and compute intelligence."""
     import time as _t
@@ -204,6 +242,11 @@ def _start_kafka_consumers():
         _kafka_consumer_manager.register_handler("geolux-classification-completed", _handle_classification_completed)
         _kafka_consumer_manager.register_handler("geolux-mpc-action-recommended", _handle_mpc_action_recommended)
 
+        from events.consumers import _handle_deepfield_finding, _handle_deepfield_incident, _handle_launchpad_lifecycle
+        _kafka_consumer_manager.register_handler("deepfield-findings", _handle_deepfield_finding)
+        _kafka_consumer_manager.register_handler("deepfield-incidents", _handle_deepfield_incident)
+        _kafka_consumer_manager.register_handler("launchpad-lifecycle", _handle_launchpad_lifecycle)
+
         _kafka_consumer_manager.start()
         lgr.info("Kafka consumers started — brokers=%s, topics=%d", kafka_brokers, len(_kafka_consumer_manager._handlers))
 
@@ -223,6 +266,8 @@ def on_startup():
     threading.Thread(target=_view_refresh_loop, daemon=True).start()
     threading.Thread(target=_retention_loop, daemon=True).start()
     threading.Thread(target=_launchpad_refresh_loop, daemon=True).start()
+    threading.Thread(target=_backfill_loop, daemon=True).start()
+    threading.Thread(target=_catalog_mining_loop, daemon=True).start()
     _start_kafka_consumers()
     logger.info(f"GeoLux started — mode={GEOLUX_MODE}")
 
@@ -246,6 +291,7 @@ from api.routers.deepfield import router as deepfield_router
 from api.routers.launchpad import router as launchpad_router
 from api.routers.scenarios import router as scenarios_router
 from api.routers.integration import router as integration_router
+from api.routers.governance import router as governance_router
 
 app.include_router(health_router)
 app.include_router(stability_router)
@@ -256,6 +302,7 @@ app.include_router(deepfield_router)
 app.include_router(launchpad_router)
 app.include_router(scenarios_router)
 app.include_router(integration_router)
+app.include_router(governance_router)
 
 # Serve frontend static files if dist/ exists (combined deployment)
 from pathlib import Path as _Path

@@ -10,7 +10,10 @@ import MPC from './pages/MPC';
 import Hardware from './pages/Hardware';
 import LaunchpadIntelligence from './pages/LaunchpadIntelligence';
 import Stability from './pages/Stability';
+import Governance from './pages/Governance';
 import Admin from './pages/Admin';
+import HypothesisDetail from './pages/HypothesisDetail';
+import MPCCycleDetail from './pages/MPCCycleDetail';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -19,6 +22,7 @@ const queryClient = new QueryClient({
 const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/hypotheses', label: 'Hypotheses' },
+  { to: '/governance', label: 'Governance' },
   { to: '/classification', label: 'Classification' },
   { to: '/mpc', label: 'MPC' },
   { to: '/hardware', label: 'Hardware' },
@@ -66,11 +70,14 @@ export default function App() {
             <main className="flex-1">
               <Routes>
                 <Route path="/" element={<Overview />} />
+                <Route path="/hypotheses/:id" element={<HypothesisDetail />} />
                 <Route path="/hypotheses" element={<Hypotheses />} />
                 <Route path="/classification" element={<Classification />} />
+                <Route path="/mpc/cycles/:id" element={<MPCCycleDetail />} />
                 <Route path="/mpc" element={<MPC />} />
                 <Route path="/hardware" element={<Hardware />} />
                 <Route path="/launchpad" element={<LaunchpadIntelligence />} />
+                <Route path="/governance" element={<Governance />} />
                 <Route path="/stability" element={<Stability />} />
                 <Route path="/admin" element={<Admin />} />
               </Routes>

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useHypothesisQueue } from '../api/hooks';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
@@ -5,6 +6,7 @@ import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 
 export default function Hypotheses() {
+  const navigate = useNavigate();
   const { data, isLoading } = useHypothesisQueue(50);
   const hypotheses = data?.hypotheses ?? [];
 
@@ -21,7 +23,7 @@ export default function Hypotheses() {
         {isLoading ? <LoadingState /> : hypotheses.length === 0 ? <EmptyState message="No hypotheses in queue." /> : (
           <div className="space-y-3">
             {hypotheses.map(h => (
-              <div key={h.hypothesis_id} className="bg-brand-surface border border-brand-border rounded-lg p-4">
+              <div key={h.hypothesis_id} className="bg-brand-surface border border-brand-border rounded-lg p-4 cursor-pointer hover:border-white/20 transition-colors" onClick={() => navigate(`/hypotheses/${h.hypothesis_id}`)}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="text-white text-sm font-medium">{h.claim}</p>

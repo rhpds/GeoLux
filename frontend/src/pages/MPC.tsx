@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useMPCCycles } from '../api/hooks';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
@@ -5,6 +6,7 @@ import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 
 export default function MPC() {
+  const navigate = useNavigate();
   const { data: cycles, isLoading } = useMPCCycles(undefined, 20);
   const records = cycles ?? [];
 
@@ -32,7 +34,7 @@ export default function MPC() {
               </thead>
               <tbody>
                 {records.map(c => (
-                  <tr key={c.cycle_id} className="border-b border-brand-surface hover:bg-brand-surface">
+                  <tr key={c.cycle_id} className="border-b border-brand-surface hover:bg-brand-surface cursor-pointer" onClick={() => navigate(`/mpc/cycles/${c.cycle_id}`)}>
                     <td className="py-2 text-white">{c.cluster_id}</td>
                     <td className="py-2 text-right text-white">{c.horizon}</td>
                     <td className="py-2 text-right text-white">{c.optimization_score.toFixed(2)}</td>

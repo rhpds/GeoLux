@@ -81,9 +81,9 @@ def get_mpc_cycle(
     cycle_id: str,
     db: Session = Depends(get_db),
 ):
-    records = repository.get_mpc_cycles(db, limit=1)
-    for r in records:
-        if r.cycle_id == cycle_id:
+    from db.models import MPCCycleRecord
+    r = db.query(MPCCycleRecord).filter(MPCCycleRecord.cycle_id == cycle_id).first()
+    if r:
             return {
                 "cycle_id": r.cycle_id,
                 "cluster_id": r.cluster_id,
@@ -99,3 +99,29 @@ def get_mpc_cycle(
                 "created_at": r.created_at.isoformat() if r.created_at else "",
             }
     raise HTTPException(status_code=404, detail="MPC cycle not found")
+
+
+@router.get("/cycles/{cycle_id}/detail")
+def get_mpc_cycle_detail(
+    cycle_id: str,
+    db: Session = Depends(get_db),
+):
+    """Full cycle detail including predictions and candidate actions."""
+    from db.models import MPCCycleRecord
+    r = db.query(MPCCycleRecord).filter(MPCCycleRecord.cycle_id == cycle_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="MPC cycle not found")
+    return {
+        "cycle_id": r.cycle_id,
+        "cluster_id": r.cluster_id,
+        "horizon": r.horizon,
+        "current_state": r.current_state,
+        "predictions": r.predictions,
+        "candidate_actions": r.candidate_actions,
+        "selected_action_id": r.selected_action_id,
+        "optimization_score": r.optimization_score,
+        "geometric_stability_profile": r.geometric_stability_profile,
+        "horizon_adjusted": r.horizon_adjusted,
+        "suspended": r.suspended,
+        "created_at": r.created_at.isoformat() if r.created_at else "",
+    }

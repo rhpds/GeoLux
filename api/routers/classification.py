@@ -75,6 +75,34 @@ def list_constraints(
     ]
 
 
+@router.get("/recent")
+def get_recent_classifications(
+    stage: Optional[str] = None,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+):
+    from db.models import ClassificationRecord
+    query = db.query(ClassificationRecord)
+    if stage:
+        query = query.filter(ClassificationRecord.constraint_id.like(f"{stage[:2]}%"))
+    records = query.order_by(ClassificationRecord.created_at.desc()).limit(limit).all()
+    return [
+        {
+            "classification_id": r.classification_id,
+            "evidence_bundle_id": r.evidence_bundle_id,
+            "constraint_id": r.constraint_id,
+            "result": r.result.value if r.result else "",
+            "confidence_score": r.confidence_score,
+            "geometric_stability_score": r.geometric_stability_score,
+            "geometric_stability_state": r.geometric_stability_state.value if r.geometric_stability_state else None,
+            "evidence_chain": r.evidence_chain,
+            "llm_interpretation_used": r.llm_interpretation_used,
+            "created_at": r.created_at.isoformat() if r.created_at else "",
+        }
+        for r in records
+    ]
+
+
 @router.get("/classifications/{classification_id}")
 def get_classification(
     classification_id: str,

@@ -3,13 +3,16 @@ import type {
   Hypothesis,
   HypothesisQueue,
   ConstraintSummary,
+  ClassificationDetail,
   MPCCycle,
+  MPCCycleDetail,
   RoutingDecision,
   TierDefinition,
   ModeInfo,
   HealthStatus,
   IntelligenceRecord,
   ScenarioInfo,
+  GovernancePipeline,
 } from './types';
 
 const GEOLUX_BASE = import.meta.env.VITE_GEOLUX_URL || '';
@@ -65,6 +68,15 @@ export const geolux = {
     params.set('limit', String(limit));
     return request<MPCCycle[]>(`/mpc/cycles?${params}`);
   },
+  getMPCCycle: (cycleId: string) =>
+    request<MPCCycleDetail>(`/mpc/cycles/${cycleId}`),
+
+  getRecentClassifications: (stage?: string, limit = 20) => {
+    const params = new URLSearchParams();
+    if (stage) params.set('stage', stage);
+    params.set('limit', String(limit));
+    return request<ClassificationDetail[]>(`/classify/recent?${params}`);
+  },
 
   getRoutingHistory: (limit = 100) =>
     request<RoutingDecision[]>(`/deepfield/routing-history?limit=${limit}`),
@@ -83,6 +95,8 @@ export const geolux = {
     request<{ cost_attribution: unknown[] }>('/launchpad/cost'),
   getUtilization: () =>
     request<{ utilization_patterns: unknown[] }>('/launchpad/utilization'),
+
+  getGovernancePipeline: () => request<GovernancePipeline>('/governance/pipeline'),
 
   getScenarios: () =>
     request<{ scenarios: ScenarioInfo[] }>('/scenarios/list'),

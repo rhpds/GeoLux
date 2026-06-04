@@ -60,6 +60,27 @@ export interface MPCCycle {
   created_at: string;
 }
 
+export interface MPCCycleDetail extends MPCCycle {
+  current_state: Record<string, unknown>;
+  predictions: Array<{ step: number; predicted_state: Record<string, unknown>; confidence: number }>;
+  candidate_actions: Array<{ action_id: string; action_type: string; parameters: Record<string, unknown>; score: number }>;
+  selected_action_id: string | null;
+  geometric_stability_profile: { scores: number[]; mean: number; min: number };
+}
+
+export interface ClassificationDetail {
+  classification_id: string;
+  evidence_bundle_id: string;
+  constraint_id: string;
+  result: string;
+  confidence_score: number;
+  geometric_stability_score: number | null;
+  geometric_stability_state: string | null;
+  evidence_chain: Record<string, unknown>;
+  llm_interpretation_used: boolean;
+  created_at: string;
+}
+
 export interface RoutingDecision {
   routing_id: string;
   workload_id: string;
@@ -101,4 +122,14 @@ export interface IntelligenceRecord {
 export interface ScenarioInfo {
   name: string;
   description: string;
+}
+
+export interface GovernancePipeline {
+  evidence: { total: number; by_outcome: Record<string, number>; by_cluster: Record<string, number>; by_stage: Record<string, number>; labs_monitored: number };
+  classifications: Record<string, number>;
+  hypotheses: Record<string, number>;
+  approvals: { total: number; pending: number; approved: number; rejected: number; top_pending: Array<{ class: string; count: number; avg_confidence: number }> };
+  actions: { mpc_cycles: number; mpc_suspended: number; remediations_applied: number; pending_actions: number };
+  top_failure_classes: Array<{ class: string; count: number; clusters: number; labs: number }>;
+  clusters: Array<{ name: string; evaluations: number; passed: number; failed: number; health_rate: number; labs_seen: number; labs_failing: number }>;
 }
