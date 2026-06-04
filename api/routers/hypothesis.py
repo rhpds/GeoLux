@@ -86,7 +86,7 @@ def get_hypothesis_queue(
     )
 
 
-@router.get("/{hypothesis_id}", response_model=HypothesisResponse)
+@router.get("/{hypothesis_id}")
 def get_hypothesis(
     hypothesis_id: str,
     db: Session = Depends(get_db),
@@ -94,16 +94,19 @@ def get_hypothesis(
     record = repository.get_hypothesis(db, hypothesis_id)
     if not record:
         raise HTTPException(status_code=404, detail="Hypothesis not found")
-    return HypothesisResponse(
-        hypothesis_id=record.hypothesis_id,
-        claim=record.claim,
-        testable_conditions=record.testable_conditions or [],
-        confidence_score=record.confidence_score,
-        geometric_stability_score=record.geometric_stability_score,
-        geometric_stability_state=record.geometric_stability_state.value if record.geometric_stability_state else "",
-        validation_outcome=record.validation_outcome.value if record.validation_outcome else None,
-        created_at=record.created_at.isoformat() if record.created_at else "",
-    )
+    return {
+        "hypothesis_id": record.hypothesis_id,
+        "claim": record.claim,
+        "testable_conditions": record.testable_conditions or [],
+        "confidence_score": record.confidence_score,
+        "geometric_stability_score": record.geometric_stability_score,
+        "geometric_stability_state": record.geometric_stability_state.value if record.geometric_stability_state else "",
+        "validation_outcome": record.validation_outcome.value if record.validation_outcome else None,
+        "created_at": record.created_at.isoformat() if record.created_at else "",
+        "evidence_bundle_id": record.evidence_bundle_id,
+        "evidence_snapshot": record.evidence_snapshot,
+        "stale": record.stale,
+    }
 
 
 @router.post("/{hypothesis_id}/validate")

@@ -127,7 +127,7 @@ def get_hypothesis_queue(
     if evidence_bundle_id:
         query = query.filter(HypothesisRecord.evidence_bundle_id == evidence_bundle_id)
     return query.order_by(
-        HypothesisRecord.geometric_stability_score.desc(),
+        HypothesisRecord.created_at.desc(),
         HypothesisRecord.confidence_score.desc(),
     ).limit(limit).all()
 

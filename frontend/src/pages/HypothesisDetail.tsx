@@ -28,7 +28,16 @@ export default function HypothesisDetail() {
     );
   }
 
-  const evidence = (hypothesis as unknown as Record<string, unknown>).evidence_snapshot as Record<string, unknown> | undefined;
+  const h = hypothesis as unknown as Record<string, unknown>;
+  const evidence = h['evidence_snapshot'] as Record<string, unknown> | undefined;
+  const bundleId = h['evidence_bundle_id'] as string | undefined;
+  const crossSystem = evidence?.cross_system as Record<string, unknown> | undefined;
+  const deepfield = crossSystem?.deepfield as Record<string, unknown> | undefined;
+
+  const cluster = evidence?.cluster_name as string || '';
+  const labCode = evidence?.lab_code as string || '';
+  const failureClass = evidence?.failure_class as string || '';
+  const message = evidence?.message as string || '';
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-6">
@@ -37,11 +46,49 @@ export default function HypothesisDetail() {
       </NavLink>
 
       <div className="flex items-start gap-4">
-        <h1 className="text-3xl font-bold text-white flex-1" style={{ fontFamily: 'Red Hat Display' }}>
+        <h1 className="text-2xl font-bold text-white flex-1" style={{ fontFamily: 'Red Hat Display' }}>
           {hypothesis.claim}
         </h1>
         <Badge variant={hypothesis.geometric_stability_state} />
       </div>
+
+      {(cluster || labCode || failureClass) && (
+        <div className="bg-brand-card border border-brand-border rounded-lg p-4">
+          <SectionHeader>Context</SectionHeader>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            {cluster && (
+              <div>
+                <div className="text-brand-muted text-xs uppercase tracking-wider">Cluster</div>
+                <div className="text-white font-medium mt-0.5">{cluster}</div>
+              </div>
+            )}
+            {labCode && (
+              <div>
+                <div className="text-brand-muted text-xs uppercase tracking-wider">Lab / Namespace</div>
+                <div className="text-white font-medium mt-0.5">{labCode}</div>
+              </div>
+            )}
+            {failureClass && (
+              <div>
+                <div className="text-brand-muted text-xs uppercase tracking-wider">Failure Class</div>
+                <Badge variant="fail">{failureClass}</Badge>
+              </div>
+            )}
+            {evidence?.['stage_id'] != null && (
+              <div>
+                <div className="text-brand-muted text-xs uppercase tracking-wider">Stage</div>
+                <div className="text-white font-medium mt-0.5">{String(evidence['stage_id'])}</div>
+              </div>
+            )}
+          </div>
+          {message && (
+            <div className="mt-3 pt-3 border-t border-brand-border">
+              <div className="text-brand-muted text-xs uppercase tracking-wider mb-1">Error Message</div>
+              <div className="text-sm text-white bg-brand-surface rounded p-2 font-mono break-all">{message}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard label="Confidence" value={hypothesis.confidence_score.toFixed(2)} />
@@ -51,59 +98,73 @@ export default function HypothesisDetail() {
       </div>
 
       <div className="bg-brand-card border border-brand-border rounded-lg p-4">
-        <SectionHeader>Testable Conditions</SectionHeader>
+        <SectionHeader>What this hypothesis tests</SectionHeader>
         {hypothesis.testable_conditions.length === 0 ? (
           <p className="text-brand-muted text-sm">No testable conditions defined.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-brand-muted uppercase tracking-wider border-b border-brand-border">
-                  <th className="text-left py-2">Field</th>
-                  <th className="text-left py-2">Operator</th>
-                  <th className="text-left py-2">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hypothesis.testable_conditions.map((c, i) => (
-                  <tr key={i} className="border-b border-brand-surface">
-                    <td className="py-2 text-white">{c.field}</td>
-                    <td className="py-2 text-white">{c.operator}</td>
-                    <td className="py-2 text-white">{String(c.value)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {hypothesis.testable_conditions.map((c, i) => (
+              <div key={i} className="flex items-center gap-3 text-sm bg-brand-surface rounded p-2">
+                <span className="text-white font-mono">{c.field}</span>
+                <Badge variant="minor">{c.operator}</Badge>
+                <span className="text-white font-mono">{String(c.value)}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {evidence && Object.keys(evidence).length > 0 && (
+      {deepfield && (
         <div className="bg-brand-card border border-brand-border rounded-lg p-4">
-          <SectionHeader>Evidence Snapshot</SectionHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <tbody>
-                {Object.entries(evidence).map(([key, val]) => (
-                  <tr key={key} className="border-b border-brand-surface">
-                    <td className="py-2 text-brand-muted font-medium w-1/3">{key}</td>
-                    <td className="py-2 text-white">{typeof val === 'object' ? JSON.stringify(val) : String(val)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <SectionHeader>Cross-System Intelligence (DeepField)</SectionHeader>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="text-brand-muted text-xs uppercase tracking-wider">Recent Events</div>
+              <div className="text-xl font-bold text-white mt-1">{String(deepfield.recent_events ?? 0)}</div>
+            </div>
+            <div>
+              <div className="text-brand-muted text-xs uppercase tracking-wider">Signal Types</div>
+              <div className="mt-1">
+                {Array.isArray(deepfield.signal_types) && deepfield.signal_types.length > 0
+                  ? (deepfield.signal_types as string[]).map((s, i) => <Badge key={i} variant="minor">{s}</Badge>)
+                  : <span className="text-brand-muted text-xs">None detected</span>}
+              </div>
+            </div>
+            <div>
+              <div className="text-brand-muted text-xs uppercase tracking-wider">RCA Categories</div>
+              <div className="mt-1">
+                {Array.isArray(deepfield.rca_categories) && deepfield.rca_categories.length > 0
+                  ? (deepfield.rca_categories as string[]).map((s, i) => <Badge key={i} variant="major">{s}</Badge>)
+                  : <span className="text-brand-muted text-xs">None identified</span>}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       <div className="bg-brand-card border border-brand-border rounded-lg p-4">
-        <SectionHeader>Validation</SectionHeader>
-        {hypothesis.validation_outcome ? (
-          <Badge variant={hypothesis.validation_outcome} />
-        ) : (
-          <Badge variant="inconclusive">Pending</Badge>
-        )}
+        <SectionHeader>Validation Status</SectionHeader>
+        <div className="flex items-center gap-4">
+          {hypothesis.validation_outcome ? (
+            <Badge variant={hypothesis.validation_outcome} />
+          ) : (
+            <div>
+              <Badge variant="inconclusive">Awaiting Validation</Badge>
+              <p className="text-xs text-brand-muted mt-2">
+                This hypothesis has not been validated against subsequent evidence.
+                It will be automatically validated when a follow-up evaluation for this
+                cluster confirms or contradicts the hypothesis.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
+      {bundleId && (
+        <div className="text-xs text-brand-muted">
+          Evidence bundle: <span className="font-mono">{bundleId}</span>
+        </div>
+      )}
     </div>
   );
 }

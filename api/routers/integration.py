@@ -164,6 +164,11 @@ def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResu
         except Exception:
             pass
 
+    try:
+        _auto_validate_hypotheses(evidence_fields, db)
+    except Exception:
+        pass
+
     logger.info(
         "Processed event %s: %s/%s → classification=%s, hypotheses=%d",
         event_id, cluster_id, stage_id, classification_result, hypotheses_count,
@@ -199,3 +204,35 @@ def receive_events_batch(
     """Receive a batch of Stargate events."""
     results = [process_stargate_event(e, db) for e in events]
     return {"processed": len(results), "results": results}
+
+
+def _auto_validate_hypotheses(evidence: dict, db: Session):
+    """Auto-validate pending hypotheses against new evidence.
+
+    When a new event arrives, check pending hypotheses for the same cluster.
+    If the hypothesis conditions match the evidence, validate or falsify it.
+    """
+    from engine.hypothesis import validate_hypothesis
+    from db import repository
+
+    cluster = evidence.get("cluster_name", "")
+    if not cluster:
+        return
+
+    pending = repository.get_hypothesis_queue(db, limit=20)
+    for h in pending:
+        if not h.evidence_snapshot:
+            continue
+        snapshot_cluster = h.evidence_snapshot.get("cluster_name", "")
+        if snapshot_cluster != cluster:
+            continue
+
+        outcome = validate_hypothesis(
+            {"testable_conditions": h.testable_conditions or []},
+            evidence,
+        )
+
+        if outcome != "inconclusive":
+            repository.update_hypothesis_validation(db, h.hypothesis_id, outcome)
+
+    db.commit()
