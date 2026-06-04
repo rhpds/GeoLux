@@ -1,39 +1,38 @@
 stage: deployment-ready
-version: 1
+version: 2
 constraints:
   - constraint_id: dr-001
-    constraint_name: Deployment exists
+    constraint_name: Deployment evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: deployment_exists
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - deployment_exists
+      - outcome
     severity: critical
     remediation_class: check_deployment
     geometric_stability_weight: 0.3
 
   - constraint_id: dr-002
-    constraint_name: Replicas available
-    assertion_type: threshold
+    constraint_name: Not a scheduling failure
+    assertion_type: pattern
     assertion_definition:
-      field: available_replicas
-      operator: gte
-      value: 1
+      field: failure_class
+      pattern: "^(?!.*scheduling_failed).*$"
     evidence_requirements:
-      - available_replicas
-    severity: critical
-    remediation_class: scale_deployment
+      - failure_class
+    severity: major
+    remediation_class: check_scheduling
     geometric_stability_weight: 0.3
 
   - constraint_id: dr-003
-    constraint_name: No crash loops
+    constraint_name: Not a crashloop
     assertion_type: pattern
     assertion_definition:
-      field: pod_statuses
-      pattern: "^(?!.*CrashLoopBackOff).*$"
+      field: failure_class
+      pattern: "^(?!.*pods_crashlooping).*$"
     evidence_requirements:
-      - pod_statuses
-    severity: major
+      - failure_class
+    severity: critical
     remediation_class: investigate_crash_loop
     geometric_stability_weight: 0.5

@@ -83,10 +83,11 @@ class TestEndToEndPipeline:
 
         # Step 2: Classify evidence (healthy cluster)
         evidence = {
-            "cluster_reachable": True,
-            "cpu_percent": 50,
-            "memory_percent": 60,
-            "healthy_node_ratio": 1.0,
+            "outcome": "pass",
+            "failure_class": "",
+            "stage_id": "cluster-health",
+            "lab_code": "test-lab",
+            "cluster_name": "e2e-cluster",
         }
         classification = classify_evidence({
             "evidence_bundle_id": "e2e-bundle-1",
@@ -159,10 +160,11 @@ class TestEndToEndPipeline:
         sync_constraints_to_db(e2e_db, STAGES_DIR)
 
         evidence = {
-            "cluster_reachable": False,
-            "cpu_percent": 95,
-            "memory_percent": 92,
-            "healthy_node_ratio": 0.3,
+            "outcome": "fail",
+            "failure_class": "pods_crashlooping",
+            "stage_id": "cluster-health",
+            "lab_code": "test-lab",
+            "cluster_name": "e2e-cluster",
         }
         classification = classify_evidence({
             "evidence_bundle_id": "e2e-fail-bundle",

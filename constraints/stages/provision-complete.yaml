@@ -1,39 +1,38 @@
 stage: provision-complete
-version: 1
+version: 2
 constraints:
   - constraint_id: pc-001
-    constraint_name: All provisioning tasks finished
+    constraint_name: Provisioning evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: provisioning_complete
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - provisioning_complete
+      - outcome
     severity: critical
     remediation_class: retry_provisioning
     geometric_stability_weight: 0.3
 
   - constraint_id: pc-002
-    constraint_name: Provisioning duration within budget
-    assertion_type: threshold
+    constraint_name: No failure class present
+    assertion_type: pattern
     assertion_definition:
-      field: provision_duration_seconds
-      operator: lte
-      value: 1800
+      field: failure_class
+      pattern: "^$"
     evidence_requirements:
-      - provision_duration_seconds
-    severity: minor
-    remediation_class: investigate_slow_provisioning
+      - failure_class
+    severity: major
+    remediation_class: diagnose_provision_errors
     geometric_stability_weight: 0.3
 
   - constraint_id: pc-003
-    constraint_name: No provisioning error messages
+    constraint_name: Stage matches provision-complete
     assertion_type: pattern
     assertion_definition:
-      field: provision_log_tail
-      pattern: "^(?!.*(ERROR|FATAL)).*$"
+      field: stage_id
+      pattern: "^provision-complete$"
     evidence_requirements:
-      - provision_log_tail
-    severity: major
-    remediation_class: diagnose_provision_errors
-    geometric_stability_weight: 0.5
+      - stage_id
+    severity: critical
+    remediation_class: check_provision_stage
+    geometric_stability_weight: 0.3

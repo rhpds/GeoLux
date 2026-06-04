@@ -1,39 +1,38 @@
 stage: vm-runtime-ready
-version: 1
+version: 2
 constraints:
   - constraint_id: vm-001
-    constraint_name: VM instance running
+    constraint_name: VM runtime evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: vm_running
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - vm_running
+      - outcome
     severity: critical
     remediation_class: start_vm
     geometric_stability_weight: 0.3
 
   - constraint_id: vm-002
-    constraint_name: VM accessible via SSH or console
-    assertion_type: boolean
+    constraint_name: Not a VM migration backoff failure
+    assertion_type: pattern
     assertion_definition:
-      field: vm_accessible
-      value: true
+      field: failure_class
+      pattern: "^(?!.*vm_migration_backoff).*$"
     evidence_requirements:
-      - vm_accessible
+      - failure_class
     severity: major
-    remediation_class: check_vm_networking
+    remediation_class: check_vm_migration
     geometric_stability_weight: 0.3
 
   - constraint_id: vm-003
-    constraint_name: VM disk usage acceptable
-    assertion_type: threshold
+    constraint_name: Stage matches vm-runtime-ready
+    assertion_type: pattern
     assertion_definition:
-      field: vm_disk_percent
-      operator: lte
-      value: 90
+      field: stage_id
+      pattern: "^vm-runtime-ready$"
     evidence_requirements:
-      - vm_disk_percent
-    severity: minor
-    remediation_class: cleanup_vm_disk
+      - stage_id
+    severity: critical
+    remediation_class: check_vm_stage
     geometric_stability_weight: 0.3

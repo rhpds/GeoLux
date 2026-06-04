@@ -1,53 +1,50 @@
 stage: cluster-health
-version: 1
+version: 2
 constraints:
   - constraint_id: ch-001
-    constraint_name: Cluster reachable
+    constraint_name: Evaluation outcome is pass
     assertion_type: boolean
     assertion_definition:
-      field: cluster_reachable
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - cluster_reachable
+      - outcome
     severity: critical
-    remediation_class: check_cluster_connectivity
+    remediation_class: investigate_cluster_health
     geometric_stability_weight: 0.3
 
   - constraint_id: ch-002
-    constraint_name: CPU usage acceptable
-    assertion_type: threshold
+    constraint_name: No critical failure class
+    assertion_type: pattern
     assertion_definition:
-      field: cpu_percent
-      operator: lte
-      value: 85
+      field: failure_class
+      pattern: "^$"
     evidence_requirements:
-      - cpu_percent
+      - failure_class
     severity: major
-    remediation_class: check_cluster_resource_usage
+    remediation_class: classify_failure
     geometric_stability_weight: 0.3
 
   - constraint_id: ch-003
-    constraint_name: Memory usage acceptable
-    assertion_type: threshold
+    constraint_name: Not a crashloop failure
+    assertion_type: pattern
     assertion_definition:
-      field: memory_percent
-      operator: lte
-      value: 90
+      field: failure_class
+      pattern: "^(?!.*crashloop).*$"
     evidence_requirements:
-      - memory_percent
-    severity: major
-    remediation_class: check_cluster_resource_usage
-    geometric_stability_weight: 0.3
+      - failure_class
+    severity: critical
+    remediation_class: investigate_crashloop
+    geometric_stability_weight: 0.5
 
   - constraint_id: ch-004
-    constraint_name: Nodes healthy
-    assertion_type: threshold
+    constraint_name: Not a deprecated API failure
+    assertion_type: pattern
     assertion_definition:
-      field: healthy_node_ratio
-      operator: gte
-      value: 0.8
+      field: failure_class
+      pattern: "^(?!.*deprecated_api).*$"
     evidence_requirements:
-      - healthy_node_ratio
-    severity: critical
-    remediation_class: check_node_health
+      - failure_class
+    severity: major
+    remediation_class: upgrade_api_version
     geometric_stability_weight: 0.3

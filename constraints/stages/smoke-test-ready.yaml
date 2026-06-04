@@ -1,40 +1,38 @@
 stage: smoke-test-ready
-version: 1
+version: 2
 constraints:
   - constraint_id: st-001
-    constraint_name: Smoke test suite passed
+    constraint_name: Smoke test evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: smoke_tests_passed
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - smoke_tests_passed
+      - outcome
     severity: critical
     remediation_class: rerun_smoke_tests
     geometric_stability_weight: 0.3
 
   - constraint_id: st-002
-    constraint_name: Test pass rate above threshold
-    assertion_type: threshold
+    constraint_name: No failure class present
+    assertion_type: pattern
     assertion_definition:
-      field: test_pass_percent
-      operator: gte
-      value: 100
+      field: failure_class
+      pattern: "^$"
     evidence_requirements:
-      - test_pass_percent
-    severity: critical
+      - failure_class
+    severity: major
     remediation_class: investigate_test_failures
     geometric_stability_weight: 0.5
 
   - constraint_id: st-003
-    constraint_name: Smoke test response time acceptable
-    assertion_type: threshold
+    constraint_name: Stage matches smoke-test-ready
+    assertion_type: pattern
     assertion_definition:
-      field: smoke_test_p95_ms
-      operator: lte
-      value: 5000
+      field: stage_id
+      pattern: "^smoke-test-ready$"
     evidence_requirements:
-      - smoke_test_p95_ms
-    severity: minor
-    remediation_class: investigate_latency
+      - stage_id
+    severity: critical
+    remediation_class: check_smoke_test_stage
     geometric_stability_weight: 0.3

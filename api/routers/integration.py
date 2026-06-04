@@ -38,6 +38,35 @@ class IntegrationResult(BaseModel):
     error: Optional[str] = None
 
 
+FAILURE_TO_STAGE = {
+    "deprecated_api": "cluster-health",
+    "readiness_probe_failed": "route-ready",
+    "scheduling_failed": "deployment-ready",
+    "claim_misbound": "namespace-ready",
+    "datasource_unrecognized": "storage-clone-ready",
+    "pvc_binding_failed": "namespace-ready",
+    "pod_pending": "deployment-ready",
+    "pods_crashlooping": "deployment-ready",
+    "sync_failed": "cluster-health",
+    "hpa_metric_failure": "cluster-health",
+    "invalid_configuration": "cluster-health",
+    "backoff_limit_exceeded": "run-created",
+    "volume_attach_failed": "storage-clone-ready",
+    "volume_mount_failed": "storage-clone-ready",
+    "vm_migration_backoff": "vm-runtime-ready",
+    "image_pull_backoff": "deployment-ready",
+}
+
+
+def _map_stage(stage_id: str, failure_class: str) -> str:
+    """Map a failure class to the appropriate constraint stage."""
+    if stage_id and stage_id != "cluster-health":
+        return stage_id
+    if failure_class:
+        return FAILURE_TO_STAGE.get(failure_class, stage_id or "cluster-health")
+    return stage_id or "cluster-health"
+
+
 def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResult:
     """Core processing logic — callable from both HTTP and Kafka handlers."""
     event_id = event.event_id or str(uuid.uuid4())
@@ -68,19 +97,25 @@ def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResu
     hypotheses_count = 0
     error = None
 
+    mapped_stage = _map_stage(stage_id, payload.get("failure_class", ""))
+
     try:
         from engine.classification import classify_evidence
+        from api.routers._shared import invalidate_constraint_cache
+        invalidate_constraint_cache()
         cls_result = classify_evidence({
             "evidence_bundle_id": bundle_id,
             "evidence": evidence_fields,
-            "stage": stage_id if stage_id else None,
+            "stage": mapped_stage if mapped_stage else None,
         }, db)
         classification_result = cls_result.get("overall_result", "unknown")
     except Exception as e:
         logger.warning("Classification failed for %s: %s", bundle_id, e)
         error = f"classification: {e}"
 
-    if payload.get("outcome") in ("fail", "warn", "FAIL", "WARN") or event.event_type in ("evaluation.failed", "evaluation.warned"):
+    is_failure = payload.get("outcome") in ("fail", "warn", "FAIL", "WARN") or event.event_type in ("evaluation.failed", "evaluation.warned")
+
+    if is_failure:
         try:
             from engine.hypothesis import generate_hypotheses
             hyp_result = generate_hypotheses({
@@ -96,7 +131,26 @@ def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResu
             else:
                 error = f"hypothesis: {e}"
 
-    if classification_result == "fail" and cluster_id and cluster_id != "unknown":
+    if is_failure:
+        try:
+            from engine.deepfield import DeepfieldRouter
+            failure_class = payload.get("failure_class", "")
+            novel = failure_class in ("", "unknown")
+            reasoning = failure_class in ("pods_crashlooping", "readiness_probe_failed", "vm_migration_backoff", "invalid_configuration")
+            router_engine = DeepfieldRouter()
+            router_engine.route({
+                "workload_id": bundle_id,
+                "workload_description": {
+                    "task_type": f"classify_{failure_class}" if failure_class else "unknown_failure",
+                    "reasoning_required": reasoning,
+                    "novel": novel,
+                    "multi_step": reasoning and novel,
+                    "context_length": len(str(evidence_fields)),
+                },
+            }, db)
+        except Exception:
+            pass
+
         try:
             from engine.mpc import MPCController
             from engine.objectives import get_objective

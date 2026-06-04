@@ -1,39 +1,38 @@
 stage: run-created
-version: 1
+version: 2
 constraints:
   - constraint_id: rc-001
-    constraint_name: Run object created
+    constraint_name: Run creation evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: run_exists
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - run_exists
+      - outcome
     severity: critical
     remediation_class: initiate_run_creation
     geometric_stability_weight: 0.3
 
   - constraint_id: rc-002
-    constraint_name: Run state is provisioning or later
+    constraint_name: Not a backoff limit exceeded failure
     assertion_type: pattern
     assertion_definition:
-      field: run_state
-      pattern: "^(provisioning|running|completed)$"
+      field: failure_class
+      pattern: "^(?!.*backoff_limit_exceeded).*$"
     evidence_requirements:
-      - run_state
+      - failure_class
     severity: critical
     remediation_class: check_run_lifecycle
     geometric_stability_weight: 0.5
 
   - constraint_id: rc-003
-    constraint_name: Lab user count within capacity
-    assertion_type: threshold
+    constraint_name: Stage matches run-created
+    assertion_type: pattern
     assertion_definition:
-      field: assigned_user_count
-      operator: lte
-      value: 200
+      field: stage_id
+      pattern: "^run-created$"
     evidence_requirements:
-      - assigned_user_count
+      - stage_id
     severity: major
-    remediation_class: scale_lab_capacity
+    remediation_class: check_run_stage
     geometric_stability_weight: 0.3

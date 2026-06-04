@@ -1,39 +1,38 @@
 stage: showroom-healthy
-version: 1
+version: 2
 constraints:
   - constraint_id: sh-001
-    constraint_name: Showroom application reachable
+    constraint_name: Showroom evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: showroom_reachable
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - showroom_reachable
+      - outcome
     severity: critical
     remediation_class: restart_showroom
     geometric_stability_weight: 0.3
 
   - constraint_id: sh-002
-    constraint_name: Showroom responds with 2xx
-    assertion_type: range
+    constraint_name: Not a readiness probe failure
+    assertion_type: pattern
     assertion_definition:
-      field: showroom_status_code
-      min: 200
-      max: 299
+      field: failure_class
+      pattern: "^(?!.*readiness_probe_failed).*$"
     evidence_requirements:
-      - showroom_status_code
+      - failure_class
     severity: major
     remediation_class: check_showroom_backend
     geometric_stability_weight: 0.3
 
   - constraint_id: sh-003
-    constraint_name: Workshop content rendered correctly
+    constraint_name: Stage matches showroom-healthy
     assertion_type: pattern
     assertion_definition:
-      field: showroom_body_content
-      pattern: "<title>.*</title>"
+      field: stage_id
+      pattern: "^showroom-healthy$"
     evidence_requirements:
-      - showroom_body_content
-    severity: major
-    remediation_class: rebuild_showroom_content
+      - stage_id
+    severity: critical
+    remediation_class: check_showroom_stage
     geometric_stability_weight: 0.5

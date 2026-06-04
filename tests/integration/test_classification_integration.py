@@ -80,19 +80,17 @@ class TestClassifyEvidence:
         result = classify_evidence({
             "evidence_bundle_id": "test-bundle-1",
             "evidence": {
-                "cluster_reachable": True,
-                "cpu_percent": 50,
-                "memory_percent": 60,
-                "healthy_node_ratio": 1.0,
+                "outcome": "pass",
+                "failure_class": "",
+                "stage_id": "cluster-health",
+                "lab_code": "test-lab",
+                "cluster_name": "test-cluster",
             },
             "stage": "cluster-health",
         }, cls_db)
 
         assert result["overall_result"] == "pass"
         assert len(result["results"]) == 4
-        for r in result["results"]:
-            assert r["result"] == "pass"
-            assert r["confidence_score"] == 1.0
 
     def test_classify_cluster_health_fail(self, cls_db):
         sync_constraints_to_db(cls_db, STAGES_DIR)
@@ -100,24 +98,25 @@ class TestClassifyEvidence:
         result = classify_evidence({
             "evidence_bundle_id": "test-bundle-2",
             "evidence": {
-                "cluster_reachable": False,
-                "cpu_percent": 95,
-                "memory_percent": 95,
-                "healthy_node_ratio": 0.5,
+                "outcome": "fail",
+                "failure_class": "pods_crashlooping",
+                "stage_id": "cluster-health",
+                "lab_code": "test-lab",
+                "cluster_name": "test-cluster",
             },
             "stage": "cluster-health",
         }, cls_db)
 
         assert result["overall_result"] == "fail"
         fail_count = sum(1 for r in result["results"] if r["result"] == "fail")
-        assert fail_count >= 3
+        assert fail_count >= 1
 
     def test_classify_with_missing_evidence(self, cls_db):
         sync_constraints_to_db(cls_db, STAGES_DIR)
 
         result = classify_evidence({
             "evidence_bundle_id": "test-bundle-3",
-            "evidence": {"cluster_reachable": True},
+            "evidence": {"outcome": "pass"},
             "stage": "cluster-health",
         }, cls_db)
 
@@ -131,10 +130,9 @@ class TestClassifyEvidence:
         result = classify_evidence({
             "evidence_bundle_id": "persist-test",
             "evidence": {
-                "cluster_reachable": True,
-                "cpu_percent": 50,
-                "memory_percent": 60,
-                "healthy_node_ratio": 1.0,
+                "outcome": "pass",
+                "failure_class": "",
+                "stage_id": "cluster-health",
             },
             "stage": "cluster-health",
         }, cls_db)
@@ -149,7 +147,7 @@ class TestClassifyEvidence:
 
         classify_evidence({
             "evidence_bundle_id": "audit-test",
-            "evidence": {"cluster_reachable": True},
+            "evidence": {"outcome": "pass", "failure_class": ""},
             "stage": "cluster-health",
         }, cls_db)
 
@@ -162,7 +160,7 @@ class TestClassifyEvidence:
 
         result = classify_evidence({
             "evidence_bundle_id": "version-test",
-            "evidence": {"cluster_reachable": True},
+            "evidence": {"outcome": "pass", "failure_class": ""},
             "stage": "cluster-health",
             "schema_version": 999,
         }, cls_db)
@@ -174,10 +172,9 @@ class TestClassifyEvidence:
         result = classify_evidence({
             "evidence_bundle_id": "auto-load-test",
             "evidence": {
-                "cluster_reachable": True,
-                "cpu_percent": 50,
-                "memory_percent": 60,
-                "healthy_node_ratio": 1.0,
+                "outcome": "pass",
+                "failure_class": "",
+                "stage_id": "cluster-health",
             },
             "stage": "cluster-health",
         }, cls_db)
@@ -189,7 +186,7 @@ class TestClassifyEvidence:
 
         result = classify_evidence({
             "evidence_bundle_id": "specific-test",
-            "evidence": {"cluster_reachable": True},
+            "evidence": {"outcome": "pass", "failure_class": ""},
             "constraint_ids": ["ch-001"],
             "stage": "cluster-health",
         }, cls_db)

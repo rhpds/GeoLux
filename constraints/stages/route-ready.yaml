@@ -1,39 +1,38 @@
 stage: route-ready
-version: 1
+version: 2
 constraints:
   - constraint_id: rr-001
-    constraint_name: Route exists
+    constraint_name: Route evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: route_exists
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - route_exists
+      - outcome
     severity: critical
     remediation_class: create_route
     geometric_stability_weight: 0.3
 
   - constraint_id: rr-002
-    constraint_name: Route responds with 2xx
-    assertion_type: range
+    constraint_name: Not a readiness probe failure
+    assertion_type: pattern
     assertion_definition:
-      field: route_status_code
-      min: 200
-      max: 299
+      field: failure_class
+      pattern: "^(?!.*readiness_probe_failed).*$"
     evidence_requirements:
-      - route_status_code
+      - failure_class
     severity: major
     remediation_class: check_route_backend
     geometric_stability_weight: 0.3
 
   - constraint_id: rr-003
-    constraint_name: TLS certificate valid
-    assertion_type: boolean
+    constraint_name: Stage matches route-ready
+    assertion_type: pattern
     assertion_definition:
-      field: tls_valid
-      value: true
+      field: stage_id
+      pattern: "^route-ready$"
     evidence_requirements:
-      - tls_valid
-    severity: major
-    remediation_class: renew_certificate
+      - stage_id
+    severity: critical
+    remediation_class: check_stage_routing
     geometric_stability_weight: 0.3

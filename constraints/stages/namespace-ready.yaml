@@ -1,39 +1,38 @@
 stage: namespace-ready
-version: 1
+version: 2
 constraints:
   - constraint_id: nr-001
-    constraint_name: Namespace exists
+    constraint_name: Namespace evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: namespace_exists
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - namespace_exists
+      - outcome
     severity: critical
     remediation_class: create_namespace
     geometric_stability_weight: 0.3
 
   - constraint_id: nr-002
-    constraint_name: Namespace phase active
-    assertion_type: boolean
+    constraint_name: Not a claim misbound failure
+    assertion_type: pattern
     assertion_definition:
-      field: namespace_active
-      value: true
+      field: failure_class
+      pattern: "^(?!.*claim_misbound).*$"
     evidence_requirements:
-      - namespace_active
-    severity: critical
-    remediation_class: check_namespace_status
+      - failure_class
+    severity: major
+    remediation_class: rebind_claims
     geometric_stability_weight: 0.3
 
   - constraint_id: nr-003
-    constraint_name: Resource quotas within limits
-    assertion_type: threshold
+    constraint_name: Not a PVC binding failure
+    assertion_type: pattern
     assertion_definition:
-      field: quota_usage_percent
-      operator: lte
-      value: 95
+      field: failure_class
+      pattern: "^(?!.*pvc_binding_failed).*$"
     evidence_requirements:
-      - quota_usage_percent
-    severity: major
-    remediation_class: adjust_resource_quotas
-    geometric_stability_weight: 0.3
+      - failure_class
+    severity: critical
+    remediation_class: check_pvc_binding
+    geometric_stability_weight: 0.5

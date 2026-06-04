@@ -1,39 +1,38 @@
 stage: storage-clone-ready
-version: 1
+version: 2
 constraints:
   - constraint_id: sc-001
-    constraint_name: PVC clone exists and is bound
+    constraint_name: Storage clone evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: pvc_bound
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - pvc_bound
+      - outcome
     severity: critical
-    remediation_class: rebind_pvc_clone
+    remediation_class: reclone_storage_volume
     geometric_stability_weight: 0.3
 
   - constraint_id: sc-002
-    constraint_name: Clone capacity sufficient
-    assertion_type: range
+    constraint_name: Not a volume attach failure
+    assertion_type: pattern
     assertion_definition:
-      field: clone_capacity_gi
-      min: 10
-      max: 500
+      field: failure_class
+      pattern: "^(?!.*volume_attach_failed).*$"
     evidence_requirements:
-      - clone_capacity_gi
-    severity: major
-    remediation_class: resize_storage_clone
-    geometric_stability_weight: 0.3
+      - failure_class
+    severity: critical
+    remediation_class: reattach_volume
+    geometric_stability_weight: 0.5
 
   - constraint_id: sc-003
-    constraint_name: Clone data integrity verified
-    assertion_type: boolean
+    constraint_name: Not a volume mount failure
+    assertion_type: pattern
     assertion_definition:
-      field: clone_integrity_ok
-      value: true
+      field: failure_class
+      pattern: "^(?!.*volume_mount_failed).*$"
     evidence_requirements:
-      - clone_integrity_ok
+      - failure_class
     severity: critical
-    remediation_class: reclone_storage_volume
-    geometric_stability_weight: 0.5
+    remediation_class: remount_volume
+    geometric_stability_weight: 0.3

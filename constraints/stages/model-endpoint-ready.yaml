@@ -1,40 +1,38 @@
 stage: model-endpoint-ready
-version: 1
+version: 2
 constraints:
   - constraint_id: me-001
-    constraint_name: Model endpoint serving
+    constraint_name: Model endpoint evaluation passed
     assertion_type: boolean
     assertion_definition:
-      field: endpoint_serving
-      value: true
+      field: outcome
+      value: pass
     evidence_requirements:
-      - endpoint_serving
+      - outcome
     severity: critical
     remediation_class: redeploy_model_endpoint
     geometric_stability_weight: 0.3
 
   - constraint_id: me-002
-    constraint_name: Inference latency acceptable
-    assertion_type: threshold
+    constraint_name: Not a readiness probe failure
+    assertion_type: pattern
     assertion_definition:
-      field: inference_p95_ms
-      operator: lte
-      value: 3000
+      field: failure_class
+      pattern: "^(?!.*readiness_probe_failed).*$"
     evidence_requirements:
-      - inference_p95_ms
+      - failure_class
     severity: major
-    remediation_class: investigate_inference_latency
+    remediation_class: check_model_serving_runtime
     geometric_stability_weight: 0.3
 
   - constraint_id: me-003
-    constraint_name: Model health endpoint responds with 2xx
-    assertion_type: range
+    constraint_name: Not an invalid configuration failure
+    assertion_type: pattern
     assertion_definition:
-      field: model_health_status_code
-      min: 200
-      max: 299
+      field: failure_class
+      pattern: "^(?!.*invalid_configuration).*$"
     evidence_requirements:
-      - model_health_status_code
+      - failure_class
     severity: critical
-    remediation_class: check_model_serving_runtime
+    remediation_class: fix_model_configuration
     geometric_stability_weight: 0.5
