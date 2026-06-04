@@ -55,6 +55,42 @@ def create_mpc_plan(
     return result
 
 
+@router.get("/stats")
+def get_mpc_stats(db: Session = Depends(get_db)):
+    """Aggregated MPC stats for dashboard."""
+    from db.models import MPCCycleRecord
+    from sqlalchemy import func, text
+
+    total = db.query(func.count(MPCCycleRecord.id)).scalar() or 0
+    suspended = db.query(func.count(MPCCycleRecord.id)).filter(MPCCycleRecord.suspended == True).scalar() or 0
+    adjusted = db.query(func.count(MPCCycleRecord.id)).filter(MPCCycleRecord.horizon_adjusted == True).scalar() or 0
+
+    clusters = []
+    try:
+        rows = db.execute(text("""
+            SELECT cluster_id, COUNT(*) as cycles,
+                   AVG(horizon) as avg_horizon,
+                   SUM(CASE WHEN suspended THEN 1 ELSE 0 END) as suspended_count,
+                   MAX(created_at) as last_cycle
+            FROM glx_mpc_cycles
+            GROUP BY cluster_id ORDER BY cycles DESC
+        """)).fetchall()
+        clusters = [{
+            "cluster": r[0], "cycles": r[1], "avg_horizon": round(float(r[2] or 0), 1),
+            "suspended": r[3], "last_cycle": r[4].isoformat() if r[4] else "",
+        } for r in rows]
+    except Exception:
+        pass
+
+    return {
+        "total": total,
+        "active": total - suspended,
+        "suspended": suspended,
+        "horizon_adjusted": adjusted,
+        "clusters": clusters,
+    }
+
+
 @router.get("/cycles")
 def list_mpc_cycles(
     cluster_id: Optional[str] = None,
