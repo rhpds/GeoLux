@@ -56,6 +56,20 @@ export const geolux = {
   getHypothesisQueue: (limit = 50) =>
     request<HypothesisQueue>(`/hypotheses/queue?limit=${limit}`),
   getHypothesis: (id: string) => request<Hypothesis>(`/hypotheses/${id}`),
+  searchHypotheses: (params: { cluster?: string; failure_class?: string; validation?: string; q?: string; limit?: number }) => {
+    const p = new URLSearchParams();
+    if (params.cluster) p.set('cluster', params.cluster);
+    if (params.failure_class) p.set('failure_class', params.failure_class);
+    if (params.validation) p.set('validation', params.validation);
+    if (params.q) p.set('q', params.q);
+    p.set('limit', String(params.limit ?? 50));
+    return request<HypothesisQueue & { filtered: boolean }>(`/hypotheses/search?${p}`);
+  },
+  getHypothesisStats: () => request<{
+    total: number; pending: number; validated: number; falsified: number;
+    clusters: Array<{ name: string; count: number }>;
+    failure_classes: Array<{ name: string; count: number }>;
+  }>('/hypotheses/stats'),
 
   getConstraints: (stage?: string) => {
     const params = stage ? `?stage=${encodeURIComponent(stage)}` : '';

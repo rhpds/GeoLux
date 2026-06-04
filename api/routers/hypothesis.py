@@ -61,6 +61,99 @@ def generate_hypotheses(
     return result
 
 
+@router.get("/search")
+def search_hypotheses(
+    cluster: Optional[str] = None,
+    failure_class: Optional[str] = None,
+    validation: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """Search and filter hypotheses."""
+    from db.models import HypothesisRecord
+    query = db.query(HypothesisRecord)
+
+    if cluster:
+        query = query.filter(HypothesisRecord.evidence_snapshot['cluster_name'].astext == cluster)
+    if failure_class:
+        query = query.filter(HypothesisRecord.evidence_snapshot['failure_class'].astext == failure_class)
+    if validation == "pending":
+        query = query.filter(HypothesisRecord.validation_outcome.is_(None))
+    elif validation == "validated":
+        query = query.filter(HypothesisRecord.validation_outcome == "validated")
+    elif validation == "falsified":
+        query = query.filter(HypothesisRecord.validation_outcome == "falsified")
+    if q:
+        query = query.filter(HypothesisRecord.claim.ilike(f"%{q}%"))
+
+    total = query.count()
+    records = query.order_by(HypothesisRecord.created_at.desc()).limit(limit).all()
+
+    return {
+        "hypotheses": [
+            {
+                "hypothesis_id": r.hypothesis_id,
+                "claim": r.claim,
+                "testable_conditions": r.testable_conditions or [],
+                "confidence_score": r.confidence_score,
+                "geometric_stability_score": r.geometric_stability_score,
+                "geometric_stability_state": r.geometric_stability_state.value if r.geometric_stability_state else "",
+                "validation_outcome": r.validation_outcome.value if r.validation_outcome else None,
+                "created_at": r.created_at.isoformat() if r.created_at else "",
+                "cluster": r.evidence_snapshot.get("cluster_name", "") if r.evidence_snapshot else "",
+                "failure_class": r.evidence_snapshot.get("failure_class", "") if r.evidence_snapshot else "",
+            }
+            for r in records
+        ],
+        "total": total,
+        "filtered": bool(cluster or failure_class or validation or q),
+    }
+
+
+@router.get("/stats")
+def get_hypothesis_stats(db: Session = Depends(get_db)):
+    """Aggregated hypothesis stats for filtering UI."""
+    from db.models import HypothesisRecord
+    from sqlalchemy import func, text
+
+    total = db.query(func.count(HypothesisRecord.id)).scalar() or 0
+    pending = db.query(func.count(HypothesisRecord.id)).filter(HypothesisRecord.validation_outcome.is_(None)).scalar() or 0
+    validated = db.query(func.count(HypothesisRecord.id)).filter(HypothesisRecord.validation_outcome == "validated").scalar() or 0
+    falsified = db.query(func.count(HypothesisRecord.id)).filter(HypothesisRecord.validation_outcome == "falsified").scalar() or 0
+
+    clusters = []
+    try:
+        rows = db.execute(text("""
+            SELECT evidence_snapshot->>'cluster_name' as cluster, COUNT(*) as c
+            FROM glx_hypotheses WHERE evidence_snapshot IS NOT NULL
+            GROUP BY cluster ORDER BY c DESC LIMIT 15
+        """)).fetchall()
+        clusters = [{"name": r[0] or "unknown", "count": r[1]} for r in rows]
+    except Exception:
+        pass
+
+    failure_classes = []
+    try:
+        rows = db.execute(text("""
+            SELECT evidence_snapshot->>'failure_class' as fc, COUNT(*) as c
+            FROM glx_hypotheses WHERE evidence_snapshot IS NOT NULL AND evidence_snapshot->>'failure_class' != ''
+            GROUP BY fc ORDER BY c DESC LIMIT 15
+        """)).fetchall()
+        failure_classes = [{"name": r[0] or "unknown", "count": r[1]} for r in rows]
+    except Exception:
+        pass
+
+    return {
+        "total": total,
+        "pending": pending,
+        "validated": validated,
+        "falsified": falsified,
+        "clusters": clusters,
+        "failure_classes": failure_classes,
+    }
+
+
 @router.get("/queue", response_model=HypothesisQueueResponse)
 def get_hypothesis_queue(
     evidence_bundle_id: Optional[str] = None,

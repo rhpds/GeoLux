@@ -38,6 +38,21 @@ class IntegrationResult(BaseModel):
     error: Optional[str] = None
 
 
+import time as _time
+_mpc_last_planned: dict[str, float] = {}
+_MPC_COOLDOWN = 300  # 5 minutes between MPC cycles per cluster
+
+
+def _should_plan_mpc(cluster_id: str) -> bool:
+    """Rate limit MPC planning to once per 5 minutes per cluster."""
+    now = _time.time()
+    last = _mpc_last_planned.get(cluster_id, 0)
+    if now - last < _MPC_COOLDOWN:
+        return False
+    _mpc_last_planned[cluster_id] = now
+    return True
+
+
 FAILURE_TO_STAGE = {
     "deprecated_api": "cluster-health",
     "readiness_probe_failed": "route-ready",
@@ -151,18 +166,19 @@ def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResu
         except Exception:
             pass
 
-        try:
-            from engine.mpc import MPCController
-            from engine.objectives import get_objective
-            controller = MPCController()
-            if controller.check_activation_gate(cluster_id, db):
-                controller.plan({
-                    "cluster_id": cluster_id,
-                    "current_state": evidence_fields,
-                    "objective": get_objective(cluster_id) or {"type": "health_target"},
-                }, db)
-        except Exception:
-            pass
+        if _should_plan_mpc(cluster_id):
+            try:
+                from engine.mpc import MPCController
+                from engine.objectives import get_objective
+                controller = MPCController()
+                if controller.check_activation_gate(cluster_id, db):
+                    controller.plan({
+                        "cluster_id": cluster_id,
+                        "current_state": evidence_fields,
+                        "objective": get_objective(cluster_id) or {"type": "health_target"},
+                    }, db)
+            except Exception:
+                pass
 
     try:
         _auto_validate_hypotheses(evidence_fields, db)
