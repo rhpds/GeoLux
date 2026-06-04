@@ -23,6 +23,22 @@ logger = logging.getLogger("geolux.summit")
 
 SUMMIT_START = "2026-06-02"
 SUMMIT_END = "2026-06-05"
+def _get_summit_catalog(db: Session) -> list:
+    """Pull Summit catalog items from Babylon scan data."""
+    try:
+        r = db.execute(text("""
+            SELECT data->'catalog_items' FROM scan_snapshots
+            WHERE scan_type = 'babylon_scan' ORDER BY scanned_at DESC LIMIT 1
+        """)).fetchone()
+        if r and r[0]:
+            import json
+            items = r[0] if isinstance(r[0], list) else json.loads(r[0]) if isinstance(r[0], str) else []
+            return [i for i in items if isinstance(i, dict) and 'summit-2026' in str(i.get('name', ''))]
+        return []
+    except Exception:
+        return []
+
+
 def _get_demo_labs(db: Session) -> list:
     """Pull demo labs dynamically from Stargate's lab_mappings table."""
     try:
@@ -40,6 +56,7 @@ class SummitMiner:
         try:
             overview = self._get_overview(db)
             hourly = self._get_hourly_pattern(db)
+            summit_catalog = _get_summit_catalog(db)
             demo_performance = self._get_demo_performance(db)
             sandbox_sessions = self._get_sandbox_stats(db)
             failure_profile = self._get_failure_profile(db)
@@ -54,6 +71,8 @@ class SummitMiner:
                     "event": "Red Hat Summit 2026",
                     "dates": f"{SUMMIT_START} to {SUMMIT_END}",
                     "overview": overview,
+                    "summit_catalog": [{"name": c.get("name", ""), "display_name": c.get("display_name", ""), "category": c.get("category", "")} for c in summit_catalog],
+                    "summit_catalog_count": len(summit_catalog),
                     "hourly_pattern": hourly,
                     "demo_performance": demo_performance,
                     "sandbox_sessions": sandbox_sessions,
@@ -125,6 +144,8 @@ class SummitMiner:
         return [{"date": str(r[0]), "hour": int(r[1]), "count": r[2]} for r in rows]
 
     def _get_demo_performance(self, db: Session) -> list:
+        demo_labs = _get_demo_labs(db)
+        lab_filter = ','.join(f"'{l}'" for l in demo_labs) if demo_labs else "''"
         rows = db.execute(text(f"""
             SELECT lab_code, COUNT(*) as evals,
                    SUM(CASE WHEN outcome = 'pass' THEN 1 ELSE 0 END) as passed,
@@ -132,8 +153,12 @@ class SummitMiner:
                    COUNT(DISTINCT cluster_name) as clusters
             FROM evaluations
             WHERE evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-              AND lab_code IN ({','.join(f"'{l}'" for l in _get_demo_labs(db))})
+              AND (lab_code IN ({lab_filter})
+                   OR lab_code LIKE 'user-demo-tenant-%'
+                   OR lab_code LIKE 'ocp4-%'
+                   OR lab_code LIKE 'intel-%')
             GROUP BY lab_code ORDER BY evals DESC
+            LIMIT 30
         """)).fetchall()
         return [{"demo_id": r[0], "evals": r[1], "passed": r[2], "failed": r[3], "clusters": r[4]} for r in rows]
 
