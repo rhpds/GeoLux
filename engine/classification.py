@@ -163,7 +163,10 @@ def _evaluate_boolean(definition: dict, evidence: dict) -> dict:
     if actual is None:
         return {"result": "inconclusive", "confidence_score": 0.0, "evidence_chain": {"field": field, "status": "missing"}, "llm_interpretation_used": False}
 
-    passed = bool(actual) == bool(expected)
+    if isinstance(expected, bool):
+        passed = bool(actual) == expected
+    else:
+        passed = str(actual) == str(expected)
     return {
         "result": "pass" if passed else "fail",
         "confidence_score": 1.0,

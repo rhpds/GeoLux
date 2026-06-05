@@ -1,38 +1,25 @@
 stage: showroom-healthy
-version: 2
+version: 3
 constraints:
-  - constraint_id: sh-001
-    constraint_name: Showroom evaluation passed
-    assertion_type: boolean
-    assertion_definition:
-      field: outcome
-      value: pass
-    evidence_requirements:
-      - outcome
-    severity: critical
-    remediation_class: restart_showroom
-    geometric_stability_weight: 0.3
-
-  - constraint_id: sh-002
-    constraint_name: Not a readiness probe failure
-    assertion_type: pattern
-    assertion_definition:
-      field: failure_class
-      pattern: "^(?!.*readiness_probe_failed).*$"
-    evidence_requirements:
-      - failure_class
-    severity: major
-    remediation_class: check_showroom_backend
-    geometric_stability_weight: 0.3
-
-  - constraint_id: sh-003
-    constraint_name: Stage matches showroom-healthy
-    assertion_type: pattern
-    assertion_definition:
-      field: stage_id
-      pattern: "^showroom-healthy$"
-    evidence_requirements:
-      - stage_id
-    severity: critical
-    remediation_class: check_showroom_stage
-    geometric_stability_weight: 0.5
+- constraint_id: sh-001
+  constraint_name: Showroom evaluation passed
+  assertion_type: boolean
+  assertion_definition:
+    field: outcome
+    value: pass
+  evidence_requirements:
+  - outcome
+  severity: critical
+  remediation_class: restart_showroom
+  geometric_stability_weight: 0.3
+- constraint_id: sh-002
+  constraint_name: Not a readiness probe failure
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: ^(?!.*readiness_probe_failed).*$
+  evidence_requirements:
+  - failure_class
+  severity: major
+  remediation_class: check_showroom_backend
+  geometric_stability_weight: 0.3

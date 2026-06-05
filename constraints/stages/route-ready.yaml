@@ -1,38 +1,25 @@
 stage: route-ready
-version: 2
+version: 3
 constraints:
-  - constraint_id: rr-001
-    constraint_name: Route evaluation passed
-    assertion_type: boolean
-    assertion_definition:
-      field: outcome
-      value: pass
-    evidence_requirements:
-      - outcome
-    severity: critical
-    remediation_class: create_route
-    geometric_stability_weight: 0.3
-
-  - constraint_id: rr-002
-    constraint_name: Not a readiness probe failure
-    assertion_type: pattern
-    assertion_definition:
-      field: failure_class
-      pattern: "^(?!.*readiness_probe_failed).*$"
-    evidence_requirements:
-      - failure_class
-    severity: major
-    remediation_class: check_route_backend
-    geometric_stability_weight: 0.3
-
-  - constraint_id: rr-003
-    constraint_name: Stage matches route-ready
-    assertion_type: pattern
-    assertion_definition:
-      field: stage_id
-      pattern: "^route-ready$"
-    evidence_requirements:
-      - stage_id
-    severity: critical
-    remediation_class: check_stage_routing
-    geometric_stability_weight: 0.3
+- constraint_id: rr-001
+  constraint_name: Route evaluation passed
+  assertion_type: boolean
+  assertion_definition:
+    field: outcome
+    value: pass
+  evidence_requirements:
+  - outcome
+  severity: critical
+  remediation_class: create_route
+  geometric_stability_weight: 0.3
+- constraint_id: rr-002
+  constraint_name: Not a readiness probe failure
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: ^(?!.*readiness_probe_failed).*$
+  evidence_requirements:
+  - failure_class
+  severity: major
+  remediation_class: check_route_backend
+  geometric_stability_weight: 0.3

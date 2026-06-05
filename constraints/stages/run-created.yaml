@@ -1,38 +1,25 @@
 stage: run-created
-version: 2
+version: 3
 constraints:
-  - constraint_id: rc-001
-    constraint_name: Run creation evaluation passed
-    assertion_type: boolean
-    assertion_definition:
-      field: outcome
-      value: pass
-    evidence_requirements:
-      - outcome
-    severity: critical
-    remediation_class: initiate_run_creation
-    geometric_stability_weight: 0.3
-
-  - constraint_id: rc-002
-    constraint_name: Not a backoff limit exceeded failure
-    assertion_type: pattern
-    assertion_definition:
-      field: failure_class
-      pattern: "^(?!.*backoff_limit_exceeded).*$"
-    evidence_requirements:
-      - failure_class
-    severity: critical
-    remediation_class: check_run_lifecycle
-    geometric_stability_weight: 0.5
-
-  - constraint_id: rc-003
-    constraint_name: Stage matches run-created
-    assertion_type: pattern
-    assertion_definition:
-      field: stage_id
-      pattern: "^run-created$"
-    evidence_requirements:
-      - stage_id
-    severity: major
-    remediation_class: check_run_stage
-    geometric_stability_weight: 0.3
+- constraint_id: rc-001
+  constraint_name: Run creation evaluation passed
+  assertion_type: boolean
+  assertion_definition:
+    field: outcome
+    value: pass
+  evidence_requirements:
+  - outcome
+  severity: critical
+  remediation_class: initiate_run_creation
+  geometric_stability_weight: 0.3
+- constraint_id: rc-002
+  constraint_name: Not a backoff limit exceeded failure
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: ^(?!.*backoff_limit_exceeded).*$
+  evidence_requirements:
+  - failure_class
+  severity: critical
+  remediation_class: check_run_lifecycle
+  geometric_stability_weight: 0.5

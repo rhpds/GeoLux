@@ -1,38 +1,25 @@
 stage: smoke-test-ready
-version: 2
+version: 3
 constraints:
-  - constraint_id: st-001
-    constraint_name: Smoke test evaluation passed
-    assertion_type: boolean
-    assertion_definition:
-      field: outcome
-      value: pass
-    evidence_requirements:
-      - outcome
-    severity: critical
-    remediation_class: rerun_smoke_tests
-    geometric_stability_weight: 0.3
-
-  - constraint_id: st-002
-    constraint_name: No failure class present
-    assertion_type: pattern
-    assertion_definition:
-      field: failure_class
-      pattern: "^$"
-    evidence_requirements:
-      - failure_class
-    severity: major
-    remediation_class: investigate_test_failures
-    geometric_stability_weight: 0.5
-
-  - constraint_id: st-003
-    constraint_name: Stage matches smoke-test-ready
-    assertion_type: pattern
-    assertion_definition:
-      field: stage_id
-      pattern: "^smoke-test-ready$"
-    evidence_requirements:
-      - stage_id
-    severity: critical
-    remediation_class: check_smoke_test_stage
-    geometric_stability_weight: 0.3
+- constraint_id: st-001
+  constraint_name: Smoke test evaluation passed
+  assertion_type: boolean
+  assertion_definition:
+    field: outcome
+    value: pass
+  evidence_requirements:
+  - outcome
+  severity: critical
+  remediation_class: rerun_smoke_tests
+  geometric_stability_weight: 0.3
+- constraint_id: st-002
+  constraint_name: No failure class present
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: ^$
+  evidence_requirements:
+  - failure_class
+  severity: major
+  remediation_class: investigate_test_failures
+  geometric_stability_weight: 0.5

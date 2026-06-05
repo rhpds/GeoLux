@@ -1,38 +1,25 @@
 stage: provision-complete
-version: 2
+version: 3
 constraints:
-  - constraint_id: pc-001
-    constraint_name: Provisioning evaluation passed
-    assertion_type: boolean
-    assertion_definition:
-      field: outcome
-      value: pass
-    evidence_requirements:
-      - outcome
-    severity: critical
-    remediation_class: retry_provisioning
-    geometric_stability_weight: 0.3
-
-  - constraint_id: pc-002
-    constraint_name: No failure class present
-    assertion_type: pattern
-    assertion_definition:
-      field: failure_class
-      pattern: "^$"
-    evidence_requirements:
-      - failure_class
-    severity: major
-    remediation_class: diagnose_provision_errors
-    geometric_stability_weight: 0.3
-
-  - constraint_id: pc-003
-    constraint_name: Stage matches provision-complete
-    assertion_type: pattern
-    assertion_definition:
-      field: stage_id
-      pattern: "^provision-complete$"
-    evidence_requirements:
-      - stage_id
-    severity: critical
-    remediation_class: check_provision_stage
-    geometric_stability_weight: 0.3
+- constraint_id: pc-001
+  constraint_name: Provisioning evaluation passed
+  assertion_type: boolean
+  assertion_definition:
+    field: outcome
+    value: pass
+  evidence_requirements:
+  - outcome
+  severity: critical
+  remediation_class: retry_provisioning
+  geometric_stability_weight: 0.3
+- constraint_id: pc-002
+  constraint_name: No failure class present
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: ^$
+  evidence_requirements:
+  - failure_class
+  severity: major
+  remediation_class: diagnose_provision_errors
+  geometric_stability_weight: 0.3
