@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -332,13 +333,12 @@ def validate_hypothesis(hypothesis: dict, evidence: dict) -> str:
             elif operator == "lte":
                 results.append("validated" if float(actual) <= float(expected) else "falsified")
             elif operator == "contains":
-                results.append("validated" if expected in str(actual) else "falsified")
+                results.append("validated" if str(expected) in str(actual) else "falsified")
             elif operator == "matches":
-                import re
                 results.append("validated" if re.search(str(expected), str(actual)) else "falsified")
             else:
                 results.append("inconclusive")
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, re.error):
             results.append("inconclusive")
 
     if "falsified" in results:
