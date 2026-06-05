@@ -75,3 +75,68 @@ def refresh_classification_rates(db: Session) -> dict:
     except Exception as e:
         logger.debug("Classification rates refresh failed: %s", e)
         return {}
+
+
+def refresh_hypothesis_stats(db: Session) -> dict:
+    """MV: Hypothesis queue aggregation for /hypotheses/stats."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    try:
+        total = db.query(func.count(HypothesisRecord.id)).filter(
+            HypothesisRecord.created_at >= cutoff
+        ).scalar() or 0
+
+        queue_depth = db.query(func.count(HypothesisRecord.id)).filter(
+            HypothesisRecord.created_at >= cutoff,
+            HypothesisRecord.validation_outcome.is_(None),
+        ).scalar() or 0
+
+        validated = db.query(func.count(HypothesisRecord.id)).filter(
+            HypothesisRecord.created_at >= cutoff,
+            HypothesisRecord.validation_outcome == "validated",
+        ).scalar() or 0
+
+        falsified = db.query(func.count(HypothesisRecord.id)).filter(
+            HypothesisRecord.created_at >= cutoff,
+            HypothesisRecord.validation_outcome == "falsified",
+        ).scalar() or 0
+
+        avg_stability = db.query(
+            func.avg(HypothesisRecord.geometric_stability_score)
+        ).filter(HypothesisRecord.created_at >= cutoff).scalar() or 0
+
+        return {
+            "total": total, "queue_depth": queue_depth,
+            "validated": validated, "falsified": falsified,
+            "avg_stability": float(avg_stability),
+        }
+    except Exception as e:
+        logger.debug("Hypothesis stats refresh failed: %s", e)
+        return {}
+
+
+def refresh_mpc_cycle_summary(db: Session) -> dict:
+    """MV: MPC cycle summary by cluster for /mpc/stats."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    try:
+        results = db.query(
+            MPCCycleRecord.cluster_id,
+            func.count(MPCCycleRecord.id).label("total_cycles"),
+            func.avg(MPCCycleRecord.horizon).label("avg_horizon"),
+            func.max(MPCCycleRecord.created_at).label("last_cycle"),
+        ).filter(
+            MPCCycleRecord.created_at >= cutoff
+        ).group_by(MPCCycleRecord.cluster_id).all()
+
+        summary = {
+            r.cluster_id: {
+                "total_cycles": r.total_cycles,
+                "avg_horizon": float(r.avg_horizon or 0),
+                "last_cycle": r.last_cycle.isoformat() if r.last_cycle else None,
+            }
+            for r in results
+        }
+        logger.debug("MPC cycle summary refreshed: %d clusters", len(summary))
+        return summary
+    except Exception as e:
+        logger.debug("MPC cycle summary refresh failed: %s", e)
+        return {}
