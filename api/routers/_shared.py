@@ -17,6 +17,7 @@ GEOLUX_MODE = os.environ.get("GEOLUX_MODE", "live")
 VALID_MODES = ("live", "synthetic", "replay")
 
 HYPOTHESIS_ENABLED = os.environ.get("GEOLUX_HYPOTHESIS_ENABLED", "true").lower() == "true"
+MPC_ENABLED = os.environ.get("GEOLUX_MPC_ENABLED", "true").lower() == "true"
 
 STABILITY_THRESHOLD = float(os.environ.get("GEOLUX_STABILITY_THRESHOLD", "0.7"))
 STABILITY_METHOD = os.environ.get("GEOLUX_STABILITY_METHOD", "token_probability")

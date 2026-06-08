@@ -40,7 +40,7 @@ class IntegrationResult(BaseModel):
 
 import time as _time
 _mpc_last_planned: dict[str, float] = {}
-_MPC_COOLDOWN = 300  # 5 minutes between MPC cycles per cluster
+_MPC_COOLDOWN = 3600  # 1 hour between MPC cycles per cluster
 
 
 def _should_plan_mpc(cluster_id: str) -> bool:
@@ -170,7 +170,8 @@ def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResu
         except Exception:
             pass
 
-        if _should_plan_mpc(cluster_id):
+        from api.routers._shared import MPC_ENABLED
+        if MPC_ENABLED and _should_plan_mpc(cluster_id):
             try:
                 from engine.mpc import MPCController
                 from engine.objectives import get_objective
