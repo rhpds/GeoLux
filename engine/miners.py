@@ -110,29 +110,28 @@ class EvaluationMiner:
         }
 
     def _process_evaluation(self, row, db: Session):
-        """Process a single Stargate evaluation into GeoLux."""
-        from api.routers.integration import StarGateEvent, process_stargate_event
+        """Process a single Stargate evaluation — classification only, no hypotheses."""
+        from engine.classification import classify_evidence
 
-        evidence = {}
-        if row.criteria_results and isinstance(row.criteria_results, dict):
-            evidence = row.criteria_results
+        from api.routers.integration import FAILURE_TO_STAGE, _map_stage
 
-        event = StarGateEvent(
-            source="stargate-backfill",
-            event_type=f"evaluation.{row.outcome}ed" if row.outcome != "warn" else "evaluation.warned",
-            payload={
-                "run_id": row.run_id or "",
-                "stage_id": row.stage_id or "",
-                "lab_code": row.lab_code or "",
-                "cluster": row.cluster_name or "",
-                "outcome": row.outcome or "",
-                "failure_class": row.failure_class or "",
-                "message": row.message or "",
-                "criteria_results": evidence,
-            },
-        )
+        evidence_fields = {
+            "outcome": row.outcome or "",
+            "failure_class": row.failure_class or "",
+            "stage_id": row.stage_id or "",
+            "lab_code": row.lab_code or "",
+            "cluster_name": row.cluster_name or "",
+            "message": row.message or "",
+        }
 
-        process_stargate_event(event, db)
+        bundle_id = f"{row.run_id or 'unknown'}/{row.stage_id or 'unknown'}"
+        mapped_stage = _map_stage(row.stage_id or "", row.failure_class or "")
+
+        classify_evidence({
+            "evidence_bundle_id": bundle_id,
+            "evidence": evidence_fields,
+            "stage": mapped_stage,
+        }, db)
 
 
 class LabSummaryMiner:

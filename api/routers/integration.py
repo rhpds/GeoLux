@@ -131,20 +131,24 @@ def process_stargate_event(event: StarGateEvent, db: Session) -> IntegrationResu
     is_failure = payload.get("outcome") in ("fail", "warn", "FAIL", "WARN") or event.event_type in ("evaluation.failed", "evaluation.warned")
 
     if is_failure:
-        try:
-            from engine.hypothesis import generate_hypotheses
-            hyp_result = generate_hypotheses({
-                "bundle_id": bundle_id,
-                "cluster_id": cluster_id,
-                "evidence_fields": evidence_fields,
-            }, db)
-            hypotheses_count = hyp_result.get("total", 0)
-        except Exception as e:
-            logger.warning("Hypothesis generation failed for %s: %s", bundle_id, e)
-            if error:
-                error += f"; hypothesis: {e}"
-            else:
-                error = f"hypothesis: {e}"
+        from api.routers._shared import HYPOTHESIS_ENABLED
+        if not HYPOTHESIS_ENABLED:
+            logger.debug("Hypothesis generation disabled — skipping")
+        else:
+            try:
+                from engine.hypothesis import generate_hypotheses
+                hyp_result = generate_hypotheses({
+                    "bundle_id": bundle_id,
+                    "cluster_id": cluster_id,
+                    "evidence_fields": evidence_fields,
+                }, db)
+                hypotheses_count = hyp_result.get("total", 0)
+            except Exception as e:
+                logger.warning("Hypothesis generation failed for %s: %s", bundle_id, e)
+                if error:
+                    error += f"; hypothesis: {e}"
+                else:
+                    error = f"hypothesis: {e}"
 
     if is_failure:
         try:

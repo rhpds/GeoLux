@@ -63,6 +63,17 @@ def generate_hypotheses(
     bundle_id = evidence_bundle.get("bundle_id", str(uuid.uuid4()))
     evidence_fields = evidence_bundle.get("evidence_fields", evidence_bundle)
 
+    cluster = evidence_fields.get("cluster_name", "")
+    failure_class = evidence_fields.get("failure_class", "")
+    if cluster and failure_class and _has_recent_hypothesis(cluster, failure_class, db):
+        return {
+            "evidence_bundle_id": bundle_id,
+            "hypotheses": [],
+            "total": 0,
+            "skipped": True,
+            "reason": f"Recent hypothesis exists for {cluster}/{failure_class}",
+        }
+
     # Enrich with cross-system data
     try:
         from engine.evidence_enricher import EvidenceEnricher
@@ -266,6 +277,22 @@ def _get_stale_hypotheses(bundle_id: str, db: Session) -> list[dict]:
         }
         for r in records
     ]
+
+
+def _has_recent_hypothesis(cluster: str, failure_class: str, db: Session, hours: int = 1) -> bool:
+    """Check if a hypothesis for this cluster+failure_class was generated recently."""
+    from db.models import HypothesisRecord
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    try:
+        count = db.query(HypothesisRecord).filter(
+            HypothesisRecord.evidence_snapshot['cluster_name'].astext == cluster,
+            HypothesisRecord.evidence_snapshot['failure_class'].astext == failure_class,
+            HypothesisRecord.created_at >= cutoff,
+        ).count()
+        return count > 0
+    except Exception:
+        return False
 
 
 def _resolve_stability_method(method_str: str) -> DBStabilityMethod:
