@@ -1,86 +1,129 @@
 """Summit event data miner.
 
-Mines historical Summit week data as a distinct event context, separate
-from day-to-day operations. Summit data is tagged and stored with event
-metadata so it can be filtered and analyzed independently.
+Combines three authoritative sources:
+1. Labagator API — the 81 labs scheduled for Summit (lab inventory)
+2. Stargate summit-report.json — mined AAP provisioning/destroy data,
+   evaluations, cluster performance, failure correlation
+3. summit-reclamation.json — AAP destroy job analysis proving retry
+   vs orphan outcomes for failed reclamations
 
-Summit week: June 2-4, 2026
-Pattern: 311K evaluations, 2,198 sandbox sessions, 21 Intel AI demo labs
+Summit: Red Hat Summit 2026, Atlanta GA, May 11-14
 """
 
 from __future__ import annotations
 
+import json
 import logging
+import urllib.request
+from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional
 
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from db import repository
 
 logger = logging.getLogger("geolux.summit")
 
-SUMMIT_START = "2026-06-02"
-SUMMIT_END = "2026-06-05"
-def _get_summit_catalog(db: Session) -> list:
-    """Pull Summit catalog items from Babylon scan data."""
-    try:
-        r = db.execute(text("""
-            SELECT data->'catalog_items' FROM scan_snapshots
-            WHERE scan_type = 'babylon_scan' ORDER BY scanned_at DESC LIMIT 1
-        """)).fetchone()
-        if r and r[0]:
-            import json
-            items = r[0] if isinstance(r[0], list) else json.loads(r[0]) if isinstance(r[0], str) else []
-            return [i for i in items if isinstance(i, dict) and 'summit-2026' in str(i.get('name', ''))]
-        return []
-    except Exception:
-        return []
+LABAGATOR_BASE = "http://labagator-backend.labagator-prod.svc:8080"
+SUMMIT_EVENT_ID = 1
+REPORT_PATH = Path(__file__).parent.parent / "receipts" / "summit-report.json"
+RECLAMATION_PATH = Path(__file__).parent.parent / "receipts" / "summit-reclamation.json"
 
 
-def _get_demo_labs(db: Session) -> list:
-    """Pull demo labs dynamically from Stargate's lab_mappings table."""
+def _labagator_get(path: str) -> dict | list | None:
     try:
-        rows = db.execute(text("SELECT lab_code FROM lab_mappings ORDER BY lab_code")).fetchall()
-        return [r[0] for r in rows if r[0]]
-    except Exception:
-        return []
+        r = urllib.request.urlopen(f"{LABAGATOR_BASE}{path}", timeout=10)
+        return json.loads(r.read())
+    except Exception as e:
+        logger.warning("Labagator API call failed %s: %s", path, e)
+        return None
+
+
+def _load_report() -> dict:
+    if REPORT_PATH.exists():
+        return json.loads(REPORT_PATH.read_text())
+    return {}
+
+
+def _load_reclamation() -> dict:
+    if RECLAMATION_PATH.exists():
+        return json.loads(RECLAMATION_PATH.read_text())
+    return {}
 
 
 class SummitMiner:
-    """Mines Summit week data into Launchpad intelligence as a distinct event."""
+    """Mines Summit data from Labagator + Stargate receipts."""
 
     def run(self, db: Session) -> dict:
-        """Extract Summit-specific intelligence from Stargate evaluations."""
         try:
-            overview = self._get_overview(db)
-            hourly = self._get_hourly_pattern(db)
-            summit_catalog = _get_summit_catalog(db)
-            demo_performance = self._get_demo_performance(db)
-            sandbox_sessions = self._get_sandbox_stats(db)
-            failure_profile = self._get_failure_profile(db)
-            cluster_load = self._get_cluster_load(db)
+            event = _labagator_get(f"/api/v1/events/{SUMMIT_EVENT_ID}")
+            labs = _labagator_get(f"/api/v1/labs?event_id={SUMMIT_EVENT_ID}") or []
+            report = _load_report()
+            reclamation = _load_reclamation()
 
-            now = datetime.now(timezone.utc)
+            event_info = {}
+            if event:
+                event_info = {
+                    "event": event.get("name", "Red Hat Summit 2026"),
+                    "location": event.get("location", ""),
+                    "start_date": event.get("start_date", ""),
+                    "end_date": event.get("end_date", ""),
+                    "timezone": event.get("timezone", ""),
+                    "rooms": event.get("rooms", []),
+                    "enabled_dates": event.get("enabled_dates", []),
+                }
+            else:
+                event_info = {
+                    "event": "Red Hat Summit 2026",
+                    "location": "Atlanta, GA",
+                    "start_date": report.get("dates", {}).get("start", "2026-05-11"),
+                    "end_date": report.get("dates", {}).get("end", "2026-05-14"),
+                }
+
+            dates = f"{event_info['start_date']} to {event_info['end_date']}"
+
+            lab_summary = self._summarize_labs(labs)
+            schedule = self._build_schedule(event)
+
+            evals = report.get("evaluations", {})
+            aap = report.get("aap", {})
+            clusters = report.get("clusters", [])
+            correlation = report.get("correlation", [])
+            failure_breakdown = aap.get("failure_breakdown", {})
+
+            overview = {
+                "total_labs": lab_summary.get("total", len(labs)),
+                "total_rooms": len(event_info.get("rooms", [])),
+                "event_days": len(event_info.get("enabled_dates", [])),
+                "total_evals": evals.get("total", 0),
+                "eval_pass_rate": evals.get("pass_rate", 0),
+                "total_aap_jobs": aap.get("total_jobs", 0),
+                "aap_failed": aap.get("total_failed", 0),
+                "aap_success_rate": aap.get("overall_success_rate", 0),
+            }
+
+            start = event_info["start_date"]
+            end = event_info["end_date"]
 
             repository.create_intelligence_record(
                 db,
                 intelligence_type="summit_overview",
                 data_payload={
-                    "event": "Red Hat Summit 2026",
-                    "dates": f"{SUMMIT_START} to {SUMMIT_END}",
+                    **event_info,
+                    "dates": dates,
                     "overview": overview,
-                    "summit_catalog": [{"name": c.get("name", ""), "display_name": c.get("display_name", ""), "category": c.get("category", "")} for c in summit_catalog],
-                    "summit_catalog_count": len(summit_catalog),
-                    "hourly_pattern": hourly,
-                    "demo_performance": demo_performance,
-                    "sandbox_sessions": sandbox_sessions,
-                    "failure_profile": failure_profile,
-                    "cluster_load": cluster_load,
+                    "labs": lab_summary,
+                    "schedule": schedule,
+                    "evaluations": evals,
+                    "aap": aap,
+                    "clusters": clusters,
+                    "correlation": correlation,
+                    "failure_breakdown": failure_breakdown,
+                    "reclamation": reclamation,
+                    "data_sources": ["labagator", "stargate-receipts", "aap-controller"],
                 },
-                time_window_start=datetime.fromisoformat(f"{SUMMIT_START}T00:00:00+00:00"),
-                time_window_end=datetime.fromisoformat(f"{SUMMIT_END}T00:00:00+00:00"),
+                time_window_start=datetime.fromisoformat(f"{start}T00:00:00+00:00"),
+                time_window_end=datetime.fromisoformat(f"{end}T23:59:59+00:00"),
             )
 
             repository.create_intelligence_record(
@@ -88,24 +131,27 @@ class SummitMiner:
                 intelligence_type="demand_signal",
                 data_payload={
                     "event": "summit",
-                    "most_requested_demos": demo_performance[:10],
-                    "highest_failure_configs": failure_profile[:10],
-                    "total_sessions": sandbox_sessions.get("total", 0),
-                    "returning_partners": [],
-                    "new_partners": [],
+                    "total_labs": len(labs),
+                    "aap_summary": {
+                        "total_jobs": aap.get("total_jobs", 0),
+                        "failed": aap.get("total_failed", 0),
+                        "destroy_failures": failure_breakdown.get("by_type", {}).get("destroy", 0),
+                        "provision_failures": failure_breakdown.get("by_type", {}).get("provision", 0),
+                    },
+                    "eval_summary": {
+                        "total": evals.get("total", 0),
+                        "pass_rate": evals.get("pass_rate", 0),
+                    },
                 },
-                time_window_start=datetime.fromisoformat(f"{SUMMIT_START}T00:00:00+00:00"),
-                time_window_end=datetime.fromisoformat(f"{SUMMIT_END}T00:00:00+00:00"),
+                time_window_start=datetime.fromisoformat(f"{start}T00:00:00+00:00"),
+                time_window_end=datetime.fromisoformat(f"{end}T23:59:59+00:00"),
             )
 
             db.commit()
 
             logger.info(
-                "Summit mined: %d evals, %d sandboxes, %d demos, %d failure classes",
-                overview.get("total_evals", 0),
-                sandbox_sessions.get("total", 0),
-                len(demo_performance),
-                len(failure_profile),
+                "Summit mined: %d labs (labagator), %d AAP jobs, %d evals (receipts)",
+                len(labs), aap.get("total_jobs", 0), evals.get("total", 0),
             )
 
             return overview
@@ -114,94 +160,56 @@ class SummitMiner:
             logger.warning("Summit mining failed: %s", e)
             return {"error": str(e)}
 
-    def _get_overview(self, db: Session) -> dict:
-        r = db.execute(text(f"""
-            SELECT COUNT(*) as evals,
-                   COUNT(DISTINCT lab_code) as labs,
-                   COUNT(DISTINCT cluster_name) as clusters,
-                   SUM(CASE WHEN outcome = 'pass' THEN 1 ELSE 0 END) as passed,
-                   SUM(CASE WHEN outcome = 'fail' THEN 1 ELSE 0 END) as failed
-            FROM evaluations
-            WHERE evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-        """)).fetchone()
-        return {
-            "total_evals": r[0] or 0,
-            "total_labs": r[1] or 0,
-            "total_clusters": r[2] or 0,
-            "passed": r[3] or 0,
-            "failed": r[4] or 0,
-        }
+    def _summarize_labs(self, labs: list) -> dict:
+        by_status: dict[str, int] = {}
+        by_cloud: dict[str, int] = {}
+        by_env_type: dict[str, int] = {}
+        lab_list = []
 
-    def _get_hourly_pattern(self, db: Session) -> list:
-        rows = db.execute(text(f"""
-            SELECT DATE(evaluated_at) as d,
-                   EXTRACT(HOUR FROM evaluated_at) as h,
-                   COUNT(*) as c
-            FROM evaluations
-            WHERE evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-            GROUP BY d, h ORDER BY d, h
-        """)).fetchall()
-        return [{"date": str(r[0]), "hour": int(r[1]), "count": r[2]} for r in rows]
+        for lab in labs:
+            status = lab.get("status") or "unknown"
+            cloud = lab.get("cloud") or "unconfigured"
+            env_type = lab.get("env_type") or "unconfigured"
 
-    def _get_demo_performance(self, db: Session) -> list:
-        demo_labs = _get_demo_labs(db)
-        lab_filter = ','.join(f"'{l}'" for l in demo_labs) if demo_labs else "''"
-        rows = db.execute(text(f"""
-            SELECT lab_code, COUNT(*) as evals,
-                   SUM(CASE WHEN outcome = 'pass' THEN 1 ELSE 0 END) as passed,
-                   SUM(CASE WHEN outcome = 'fail' THEN 1 ELSE 0 END) as failed,
-                   COUNT(DISTINCT cluster_name) as clusters
-            FROM evaluations
-            WHERE evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-              AND (lab_code IN ({lab_filter})
-                   OR lab_code LIKE 'user-demo-tenant-%'
-                   OR lab_code LIKE 'ocp4-%'
-                   OR lab_code LIKE 'intel-%')
-            GROUP BY lab_code ORDER BY evals DESC
-            LIMIT 30
-        """)).fetchall()
-        return [{"demo_id": r[0], "evals": r[1], "passed": r[2], "failed": r[3], "clusters": r[4]} for r in rows]
+            by_status[status] = by_status.get(status, 0) + 1
+            if cloud:
+                by_cloud[cloud] = by_cloud.get(cloud, 0) + 1
+            if env_type:
+                by_env_type[env_type] = by_env_type.get(env_type, 0) + 1
 
-    def _get_sandbox_stats(self, db: Session) -> dict:
-        total = db.execute(text(f"""
-            SELECT COUNT(DISTINCT lab_code)
-            FROM evaluations
-            WHERE lab_code LIKE 'sandbox-%'
-              AND evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-        """)).scalar() or 0
-
-        by_day = db.execute(text(f"""
-            SELECT DATE(evaluated_at) as d, COUNT(DISTINCT lab_code) as sessions
-            FROM evaluations
-            WHERE lab_code LIKE 'sandbox-%'
-              AND evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-            GROUP BY d ORDER BY d
-        """)).fetchall()
+            lab_list.append({
+                "lab_code": lab.get("lab_code", ""),
+                "title": lab.get("title", ""),
+                "status": status,
+                "cloud": cloud,
+                "env_type": env_type,
+                "deploy_mode": lab.get("deploy_mode") or "",
+            })
 
         return {
-            "total": total,
-            "by_day": [{"date": str(r[0]), "sessions": r[1]} for r in by_day],
+            "total": len(labs),
+            "by_status": dict(sorted(by_status.items(), key=lambda x: -x[1])),
+            "by_cloud": dict(sorted(by_cloud.items(), key=lambda x: -x[1])),
+            "by_env_type": dict(sorted(by_env_type.items(), key=lambda x: -x[1])),
+            "lab_list": lab_list,
         }
 
-    def _get_failure_profile(self, db: Session) -> list:
-        rows = db.execute(text(f"""
-            SELECT failure_class, COUNT(*) as c,
-                   COUNT(DISTINCT cluster_name) as clusters,
-                   COUNT(DISTINCT lab_code) as labs
-            FROM evaluations
-            WHERE failure_class IS NOT NULL
-              AND evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-            GROUP BY failure_class ORDER BY c DESC LIMIT 15
-        """)).fetchall()
-        return [{"class": r[0], "count": r[1], "clusters": r[2], "labs": r[3]} for r in rows]
+    def _build_schedule(self, event: dict | None) -> dict:
+        if not event:
+            return {"event_days": 0, "rooms": []}
 
-    def _get_cluster_load(self, db: Session) -> list:
-        rows = db.execute(text(f"""
-            SELECT cluster_name, DATE(evaluated_at) as d,
-                   COUNT(*) as evals, COUNT(DISTINCT lab_code) as labs
-            FROM evaluations
-            WHERE evaluated_at >= '{SUMMIT_START}' AND evaluated_at < '{SUMMIT_END}'
-              AND cluster_name IS NOT NULL
-            GROUP BY cluster_name, d ORDER BY cluster_name, d
-        """)).fetchall()
-        return [{"cluster": r[0], "date": str(r[1]), "evals": r[2], "labs": r[3]} for r in rows]
+        enabled_dates = event.get("enabled_dates", [])
+        rooms = event.get("rooms", [])
+
+        return {
+            "event_days": len(enabled_dates),
+            "by_day": [
+                {"date": d.get("date", ""), "start_hour": d.get("start_hour", ""), "end_hour": d.get("end_hour", "")}
+                for d in enabled_dates
+            ],
+            "rooms": sorted(
+                [{"name": r.get("room_name", ""), "capacity": r.get("default_capacity", 0)} for r in rooms],
+                key=lambda x: x["name"],
+            ),
+            "total_capacity": sum(r.get("default_capacity", 0) for r in rooms),
+        }

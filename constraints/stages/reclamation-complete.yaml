@@ -1,0 +1,74 @@
+stage: reclamation-complete
+version: 3
+constraints:
+- constraint_id: rc-001
+  constraint_name: Destroy outcome passed
+  assertion_type: boolean
+  assertion_definition:
+    field: outcome
+    value: pass
+  evidence_requirements:
+  - outcome
+  severity: critical
+  remediation_class: retry_destroy
+  geometric_stability_weight: 0.3
+
+- constraint_id: rc-002
+  constraint_name: No destroy failure class
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: "^$"
+  evidence_requirements:
+  - failure_class
+  severity: major
+  remediation_class: diagnose_destroy_failure
+  geometric_stability_weight: 0.3
+
+- constraint_id: rc-003
+  constraint_name: Not a tenant namespace teardown failure
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: "^(?!.*tenant_destroy_failed).*$"
+  evidence_requirements:
+  - failure_class
+  severity: critical
+  remediation_class: force_namespace_delete
+  geometric_stability_weight: 0.5
+
+- constraint_id: rc-004
+  constraint_name: Not a CNV resource cleanup failure
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: "^(?!.*cnv_cleanup_failed).*$"
+  evidence_requirements:
+  - failure_class
+  severity: critical
+  remediation_class: force_vm_cleanup
+  geometric_stability_weight: 0.5
+
+- constraint_id: rc-005
+  constraint_name: Not a cluster teardown failure
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: "^(?!.*cluster_teardown_failed).*$"
+  evidence_requirements:
+  - failure_class
+  severity: critical
+  remediation_class: escalate_cluster_teardown
+  geometric_stability_weight: 0.5
+
+- constraint_id: rc-006
+  constraint_name: Not a generic playbook failure
+  assertion_type: pattern
+  assertion_definition:
+    field: failure_class
+    pattern: "^(?!.*destroy_playbook_failed).*$"
+  evidence_requirements:
+  - failure_class
+  severity: major
+  remediation_class: review_destroy_playbook
+  geometric_stability_weight: 0.4

@@ -70,6 +70,10 @@ FAILURE_TO_STAGE = {
     "volume_mount_failed": "storage-clone-ready",
     "vm_migration_backoff": "vm-runtime-ready",
     "image_pull_backoff": "deployment-ready",
+    "tenant_destroy_failed": "reclamation-complete",
+    "cnv_cleanup_failed": "reclamation-complete",
+    "cluster_teardown_failed": "reclamation-complete",
+    "destroy_playbook_failed": "reclamation-complete",
 }
 
 

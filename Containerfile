@@ -23,6 +23,7 @@ COPY db/ db/
 COPY events/ events/
 COPY constraints/ constraints/
 COPY scenarios/ scenarios/
+COPY receipts/ receipts/
 COPY alembic/ alembic/
 COPY alembic.ini .
 

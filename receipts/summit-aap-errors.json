@@ -1,0 +1,304 @@
+{
+  "controller": "event0",
+  "total_failed_fetched": 1000,
+  "total_failed_available": 6241,
+  "by_type": {
+    "provision": 160,
+    "destroy": 765,
+    "other": 75
+  },
+  "by_day": {
+    "2026-05-08": {
+      "total": 1000,
+      "provision": 160,
+      "destroy": 765,
+      "other": 75
+    }
+  },
+  "by_prefix": {
+    "summit-2026": {
+      "total": 654,
+      "provision": 77,
+      "destroy": 525,
+      "other": 52
+    },
+    "agd-v2": {
+      "total": 198,
+      "provision": 31,
+      "destroy": 165,
+      "other": 2
+    },
+    "ai-quickstarts": {
+      "total": 75,
+      "provision": 0,
+      "destroy": 74,
+      "other": 1
+    },
+    "zt-ansiblebu": {
+      "total": 64,
+      "provision": 44,
+      "destroy": 0,
+      "other": 20
+    },
+    "zt-rhelbu": {
+      "total": 8,
+      "provision": 7,
+      "destroy": 1,
+      "other": 0
+    },
+    "sandboxes-gpte": {
+      "total": 1,
+      "provision": 1,
+      "destroy": 0,
+      "other": 0
+    }
+  },
+  "top_failing_labs": {
+    "LB1401": {
+      "failed": 228,
+      "provision_failures": 0,
+      "destroy_failures": 228,
+      "catalog_items": [
+        "summit-2026.lb1401-guardrails-cnv-slfsrv",
+        "summit-2026.lb1401-guardrails-cnv-tenant"
+      ]
+    },
+    "ocp4-getting-started-module-1-tenant": {
+      "failed": 97,
+      "provision_failures": 0,
+      "destroy_failures": 97,
+      "catalog_items": [
+        "agd-v2.ocp4-getting-started-module-1-tenant"
+      ]
+    },
+    "LB1305": {
+      "failed": 90,
+      "provision_failures": 0,
+      "destroy_failures": 60,
+      "catalog_items": [
+        "summit-2026.lb1305-ai-powered-rhel-mgmt-cnv"
+      ]
+    },
+    "ai-lightning-voice-agents-tenant": {
+      "failed": 82,
+      "provision_failures": 0,
+      "destroy_failures": 82,
+      "catalog_items": [
+        "summit-2026.ai-lightning-voice-agents-tenant"
+      ]
+    },
+    "zt-ans-bu-lab-developer-cnv": {
+      "failed": 64,
+      "provision_failures": 44,
+      "destroy_failures": 0,
+      "catalog_items": [
+        "zt-ansiblebu.zt-ans-bu-lab-developer-cnv"
+      ]
+    },
+    "ai-lightning-wordswarm-tenant": {
+      "failed": 54,
+      "provision_failures": 0,
+      "destroy_failures": 54,
+      "catalog_items": [
+        "summit-2026.ai-lightning-wordswarm-tenant"
+      ]
+    },
+    "ocp4-getting-started-module-2-tenant": {
+      "failed": 38,
+      "provision_failures": 0,
+      "destroy_failures": 38,
+      "catalog_items": [
+        "agd-v2.ocp4-getting-started-module-2-tenant"
+      ]
+    },
+    "LB1839": {
+      "failed": 37,
+      "provision_failures": 0,
+      "destroy_failures": 36,
+      "catalog_items": [
+        "summit-2026.lb1839-balance-virt-fallback"
+      ]
+    },
+    "LB1216": {
+      "failed": 34,
+      "provision_failures": 23,
+      "destroy_failures": 11,
+      "catalog_items": [
+        "summit-2026.lb1216-demyst-aap-ocp-tenant"
+      ]
+    },
+    "ocp4-getting-started-module-3-tenant": {
+      "failed": 30,
+      "provision_failures": 0,
+      "destroy_failures": 28,
+      "catalog_items": [
+        "agd-v2.ocp4-getting-started-module-3-tenant"
+      ]
+    },
+    "LB2862": {
+      "failed": 22,
+      "provision_failures": 11,
+      "destroy_failures": 11,
+      "catalog_items": [
+        "summit-2026.lb2862-ai-app-dev-cluster"
+      ]
+    },
+    "ocp-cluster-cnv-pools": {
+      "failed": 21,
+      "provision_failures": 21,
+      "destroy_failures": 0,
+      "catalog_items": [
+        "agd-v2.ocp-cluster-cnv-pools"
+      ]
+    },
+    "ai-qs-ppe-comp-tenant": {
+      "failed": 19,
+      "provision_failures": 0,
+      "destroy_failures": 19,
+      "catalog_items": [
+        "ai-quickstarts.ai-qs-ppe-comp-tenant"
+      ]
+    },
+    "ai-qs-rag-tenant": {
+      "failed": 18,
+      "provision_failures": 0,
+      "destroy_failures": 18,
+      "catalog_items": [
+        "ai-quickstarts.ai-qs-rag-tenant"
+      ]
+    },
+    "ai-lightning-private-maas-tenant": {
+      "failed": 17,
+      "provision_failures": 0,
+      "destroy_failures": 17,
+      "catalog_items": [
+        "summit-2026.ai-lightning-private-maas-tenant"
+      ]
+    },
+    "LB1237": {
+      "failed": 16,
+      "provision_failures": 16,
+      "destroy_failures": 0,
+      "catalog_items": [
+        "summit-2026.lb1237-hol-rhel10-aws",
+        "summit-2026.lb1237-hol-rhel10-cnv"
+      ]
+    },
+    "ai-qs-product-rec-tenant": {
+      "failed": 12,
+      "provision_failures": 0,
+      "destroy_failures": 12,
+      "catalog_items": [
+        "ai-quickstarts.ai-qs-product-rec-tenant"
+      ]
+    },
+    "ai-qs-data-gov-tenant": {
+      "failed": 11,
+      "provision_failures": 0,
+      "destroy_failures": 11,
+      "catalog_items": [
+        "ai-quickstarts.ai-qs-data-gov-tenant"
+      ]
+    },
+    "LB2236": {
+      "failed": 11,
+      "provision_failures": 0,
+      "destroy_failures": 8,
+      "catalog_items": [
+        "summit-2026.lb2236-ansible-dev-tools-cluster",
+        "summit-2026.lb2236-ansible-dev-tools-tenant"
+      ]
+    },
+    "LB1347": {
+      "failed": 10,
+      "provision_failures": 0,
+      "destroy_failures": 0,
+      "catalog_items": [
+        "summit-2026.lb1347-advanced-features-of-aap-cnv"
+      ]
+    }
+  },
+  "top_catalogs": {
+    "summit-2026.lb1401-guardrails-cnv-tenant": {
+      "failed": 198,
+      "provision": 0,
+      "destroy": 198
+    },
+    "agd-v2.ocp4-getting-started-module-1-tenant": {
+      "failed": 97,
+      "provision": 0,
+      "destroy": 97
+    },
+    "summit-2026.lb1305-ai-powered-rhel-mgmt-cnv": {
+      "failed": 90,
+      "provision": 0,
+      "destroy": 60
+    },
+    "summit-2026.ai-lightning-voice-agents-tenant": {
+      "failed": 82,
+      "provision": 0,
+      "destroy": 82
+    },
+    "zt-ansiblebu.zt-ans-bu-lab-developer-cnv": {
+      "failed": 64,
+      "provision": 44,
+      "destroy": 0
+    },
+    "summit-2026.ai-lightning-wordswarm-tenant": {
+      "failed": 54,
+      "provision": 0,
+      "destroy": 54
+    },
+    "agd-v2.ocp4-getting-started-module-2-tenant": {
+      "failed": 38,
+      "provision": 0,
+      "destroy": 38
+    },
+    "summit-2026.lb1839-balance-virt-fallback": {
+      "failed": 37,
+      "provision": 0,
+      "destroy": 36
+    },
+    "summit-2026.lb1216-demyst-aap-ocp-tenant": {
+      "failed": 34,
+      "provision": 23,
+      "destroy": 11
+    },
+    "agd-v2.ocp4-getting-started-module-3-tenant": {
+      "failed": 30,
+      "provision": 0,
+      "destroy": 28
+    },
+    "summit-2026.lb1401-guardrails-cnv-slfsrv": {
+      "failed": 30,
+      "provision": 0,
+      "destroy": 30
+    },
+    "summit-2026.lb2862-ai-app-dev-cluster": {
+      "failed": 22,
+      "provision": 11,
+      "destroy": 11
+    },
+    "agd-v2.ocp-cluster-cnv-pools": {
+      "failed": 21,
+      "provision": 21,
+      "destroy": 0
+    },
+    "ai-quickstarts.ai-qs-ppe-comp-tenant": {
+      "failed": 19,
+      "provision": 0,
+      "destroy": 19
+    },
+    "ai-quickstarts.ai-qs-rag-tenant": {
+      "failed": 18,
+      "provision": 0,
+      "destroy": 18
+    }
+  },
+  "top_playbooks": {
+    "ansible/destroy.yml": 765,
+    "ansible/main.yml": 235
+  },
+  "avg_duration_minutes": 8.7,
+  "max_duration_minutes": 180.1
+}

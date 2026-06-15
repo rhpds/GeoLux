@@ -125,11 +125,14 @@ def _backfill_loop():
         try:
             from db.database import get_db
             from engine.miners import EvaluationMiner, LabSummaryMiner, ClusterSummaryMiner
+            from engine.reclamation_miner import ReclamationMiner
             db = next(get_db())
             result = EvaluationMiner(batch_size=200, pause_ms=100).run(db, days=7, max_batches=20)
             lgr.info("Evaluation backfill: %s", result)
             LabSummaryMiner().run(db)
             ClusterSummaryMiner().run(db)
+            recl = ReclamationMiner().run(db)
+            lgr.info("Reclamation backfill: %s", recl)
             db.close()
         except Exception as e:
             lgr.debug("Backfill failed: %s", e)

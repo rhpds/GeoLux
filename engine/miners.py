@@ -135,59 +135,57 @@ class EvaluationMiner:
 
 
 class LabSummaryMiner:
-    """Mines Stargate's materialized lab eval summary for Launchpad intelligence."""
+    """Mines Stargate's lab data for real demo lab intelligence."""
 
     def run(self, db: Session) -> dict:
-        """Read mv_lab_eval_summary and compute Launchpad intelligence."""
+        """Extract demo lab performance — only user-facing labs, not infrastructure."""
         try:
-            rows = db.execute(text("""
-                SELECT lab_code, cluster_name, total_evals, passed, failed,
-                       health_rate, top_failure_class
-                FROM mv_lab_eval_summary
-                WHERE total_evals > 0
-                ORDER BY failed DESC
-                LIMIT 500
+            from db import repository
+
+            mapped_labs = db.execute(text("SELECT lab_code FROM lab_mappings")).fetchall()
+            mapped_names = [r[0] for r in mapped_labs]
+
+            demo_labs = db.execute(text("""
+                SELECT lab_code, COUNT(*) as evals,
+                       SUM(CASE WHEN outcome = 'pass' THEN 1 ELSE 0 END) as passed,
+                       SUM(CASE WHEN outcome = 'fail' THEN 1 ELSE 0 END) as failed,
+                       COUNT(DISTINCT cluster_name) as clusters
+                FROM evaluations
+                WHERE (lab_code LIKE 'user-demo-tenant-%%'
+                       OR lab_code LIKE 'ocp4-%%'
+                       OR lab_code LIKE 'intel-%%'
+                       OR lab_code LIKE 'sandbox-%%')
+                GROUP BY lab_code
+                HAVING COUNT(*) > 10
+                ORDER BY COUNT(*) DESC
+                LIMIT 50
             """)).fetchall()
 
-            if not rows:
-                return {"skipped": True, "reason": "no lab eval data"}
+            sandbox_count = db.execute(text(
+                "SELECT COUNT(DISTINCT lab_code) FROM evaluations WHERE lab_code LIKE 'sandbox-%%'"
+            )).scalar() or 0
 
-            from engine.launchpad import LaunchpadIntelligence
-            intel = LaunchpadIntelligence()
-
-            sessions = []
-            for r in rows:
-                sessions.append({
-                    "demo_id": r.lab_code or "",
-                    "partner_id": "",
-                    "sa_id": "",
-                    "lab_code": r.lab_code or "",
-                    "config": r.cluster_name or "",
-                    "status": "completed" if r.health_rate and r.health_rate > 50 else "failed",
-                    "cost": float(r.total_evals or 0) * 0.01,
-                    "hardware_config": "cpu",
-                    "started_at": "",
-                })
-
-            data = {
-                "sessions": sessions,
-                "labs": [{"lab_code": r.lab_code} for r in rows],
-            }
-
-            signals = intel.compute_demand_signals(data, db)
-            costs = intel.compute_cost_attribution(data, db)
-
-            logger.info(
-                "Lab summary mined: %d labs, %d sessions, demand=%d signals",
-                len(set(r.lab_code for r in rows)),
-                len(sessions),
-                len(signals.get("most_requested_demos", [])),
+            now = datetime.now(timezone.utc)
+            repository.create_intelligence_record(
+                db,
+                intelligence_type="demo_lab_performance",
+                data_payload={
+                    "mapped_labs": mapped_names,
+                    "mapped_lab_count": len(mapped_names),
+                    "sandbox_sessions": sandbox_count,
+                    "demo_labs": [
+                        {"lab": r[0], "evals": r[1], "passed": r[2], "failed": r[3], "clusters": r[4]}
+                        for r in demo_labs
+                    ],
+                },
+                time_window_start=now,
+                time_window_end=now,
             )
+            db.commit()
 
-            return {
-                "labs": len(set(r.lab_code for r in rows)),
-                "sessions": len(sessions),
-            }
+            logger.info("Lab summary: %d mapped labs, %d sandbox sessions, %d active demos",
+                        len(mapped_names), sandbox_count, len(demo_labs))
+            return {"mapped": len(mapped_names), "sandboxes": sandbox_count, "demos": len(demo_labs)}
 
         except Exception as e:
             logger.warning("Lab summary mining failed: %s", e)

@@ -1,0 +1,662 @@
+{
+  "total_destroy_jobs": 2403,
+  "successful": 2166,
+  "failed": 232,
+  "unique_resources_failed": 134,
+  "retried_and_recovered": 68,
+  "never_reclaimed": 66,
+  "success_only": 1985,
+  "error_patterns": [
+    {
+      "pattern": "Remove bootstrap ArgoCD application (ocp4_workload_gitops_bootstrap)",
+      "count": 30
+    },
+    {
+      "pattern": "Log in to OpenShift cluster (quickstart_deploy_via_make)",
+      "count": 13
+    },
+    {
+      "pattern": "Debug workloads and clusters for destroy operation (openshift_workload_destroyer)",
+      "count": 5
+    },
+    {
+      "pattern": "Delete dns records (host-ocp4-assisted-destroy)",
+      "count": 1
+    },
+    {
+      "pattern": "Fail if ocp_console_embed_domain is not set (ocp4_workload_ocp_console_embed)",
+      "count": 1
+    }
+  ],
+  "orphaned_resources": [
+    {
+      "resource_id": "event-2q4rd",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-14T23:08:05"
+    },
+    {
+      "resource_id": "event-49rj2",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 3,
+      "last_attempt": "2026-05-12T22:21:28"
+    },
+    {
+      "resource_id": "event-5dn6p",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 1,
+      "last_attempt": "2026-05-11T00:56:09"
+    },
+    {
+      "resource_id": "event-5n4c9",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-15T07:05:33"
+    },
+    {
+      "resource_id": "event-6ddjt",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 3,
+      "last_attempt": "2026-05-15T01:22:43"
+    },
+    {
+      "resource_id": "event-6gz6v",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 3,
+      "last_attempt": "2026-05-15T01:22:37"
+    },
+    {
+      "resource_id": "event-6vqcr",
+      "lab": "ocp-cluster-cnv-pools",
+      "catalog": "agd-v2.ocp-cluster-cnv-pools",
+      "attempts": 1,
+      "last_attempt": "2026-05-14T19:18:29"
+    },
+    {
+      "resource_id": "event-7t9qj",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:22"
+    },
+    {
+      "resource_id": "event-7v28m",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:20"
+    },
+    {
+      "resource_id": "event-82shw",
+      "lab": "ocp-virt-labs-pool-ocpv01",
+      "catalog": "agd-v2.ocp-virt-labs-pool-ocpv01",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T12:29:54"
+    },
+    {
+      "resource_id": "event-8hfcf",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-aws",
+      "attempts": 5,
+      "last_attempt": "2026-05-13T19:12:55"
+    },
+    {
+      "resource_id": "event-8knk4",
+      "lab": "lb2862",
+      "catalog": "summit-2026.lb2862-ai-app-dev-tenant",
+      "attempts": 1,
+      "last_attempt": "2026-05-13T22:19:38"
+    },
+    {
+      "resource_id": "event-8qlqm",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:18"
+    },
+    {
+      "resource_id": "event-8tx8n",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:23"
+    },
+    {
+      "resource_id": "event-9n267",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:11"
+    },
+    {
+      "resource_id": "event-9qtt6",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:11:06"
+    },
+    {
+      "resource_id": "event-bhqmf",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:18"
+    },
+    {
+      "resource_id": "event-bmd5q",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:21"
+    },
+    {
+      "resource_id": "event-br6ct",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 3,
+      "last_attempt": "2026-05-15T09:57:56"
+    },
+    {
+      "resource_id": "event-bsfph",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 1,
+      "last_attempt": "2026-05-12T01:03:26"
+    },
+    {
+      "resource_id": "event-ck7gw",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:22"
+    },
+    {
+      "resource_id": "event-ck8h8",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 1,
+      "last_attempt": "2026-05-11T01:51:59"
+    },
+    {
+      "resource_id": "event-cp2ms",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 1,
+      "last_attempt": "2026-05-14T18:59:06"
+    },
+    {
+      "resource_id": "event-cz2ts",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 5,
+      "last_attempt": "2026-05-15T01:24:36"
+    },
+    {
+      "resource_id": "event-dm5st",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:09:19"
+    },
+    {
+      "resource_id": "event-fs22v",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 3,
+      "last_attempt": "2026-05-15T01:22:38"
+    },
+    {
+      "resource_id": "event-gtt48",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:20"
+    },
+    {
+      "resource_id": "event-hdm2l",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 3,
+      "last_attempt": "2026-05-14T01:18:43"
+    },
+    {
+      "resource_id": "event-jbgtm",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 4,
+      "last_attempt": "2026-05-15T01:23:33"
+    },
+    {
+      "resource_id": "event-jmz9q",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:43"
+    },
+    {
+      "resource_id": "event-kpwdn",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 1,
+      "last_attempt": "2026-05-13T22:04:17"
+    },
+    {
+      "resource_id": "event-kxc8p",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 5,
+      "last_attempt": "2026-05-15T04:07:44"
+    },
+    {
+      "resource_id": "event-l6v57",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 4,
+      "last_attempt": "2026-05-15T09:49:14"
+    },
+    {
+      "resource_id": "event-lmn49",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:44"
+    },
+    {
+      "resource_id": "event-m4qwv",
+      "lab": "ocp-cluster-cnv-pools",
+      "catalog": "agd-v2.ocp-cluster-cnv-pools",
+      "attempts": 1,
+      "last_attempt": "2026-05-13T22:08:04"
+    },
+    {
+      "resource_id": "event-mn4bb",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 1,
+      "last_attempt": "2026-05-11T00:59:17"
+    },
+    {
+      "resource_id": "event-mrzb2",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 1,
+      "last_attempt": "2026-05-11T00:59:20"
+    },
+    {
+      "resource_id": "event-mxv62",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:27"
+    },
+    {
+      "resource_id": "event-ntz9m",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 3,
+      "last_attempt": "2026-05-15T01:23:41"
+    },
+    {
+      "resource_id": "event-nz8k5",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:45"
+    },
+    {
+      "resource_id": "event-q2vwz",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 3,
+      "last_attempt": "2026-05-15T01:23:37"
+    },
+    {
+      "resource_id": "event-q62v7",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 4,
+      "last_attempt": "2026-05-15T01:24:08"
+    },
+    {
+      "resource_id": "event-qp4th",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:57"
+    },
+    {
+      "resource_id": "event-qpwcv",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:52"
+    },
+    {
+      "resource_id": "event-qs5pl",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 1,
+      "last_attempt": "2026-05-11T00:59:18"
+    },
+    {
+      "resource_id": "event-qvkk9",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:25"
+    },
+    {
+      "resource_id": "event-qxh4m",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:32"
+    },
+    {
+      "resource_id": "event-rzxk6",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:23"
+    },
+    {
+      "resource_id": "event-s56j8",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:42"
+    },
+    {
+      "resource_id": "event-skggh",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 3,
+      "last_attempt": "2026-05-14T01:16:49"
+    },
+    {
+      "resource_id": "event-svd9z",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 4,
+      "last_attempt": "2026-05-15T01:23:51"
+    },
+    {
+      "resource_id": "event-tfnf6",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 1,
+      "last_attempt": "2026-05-14T16:30:45"
+    },
+    {
+      "resource_id": "event-tm9zg",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 4,
+      "last_attempt": "2026-05-15T01:24:21"
+    },
+    {
+      "resource_id": "event-tv5t8",
+      "lab": "ocp-cluster-cnv-pools",
+      "catalog": "agd-v2.ocp-cluster-cnv-pools",
+      "attempts": 2,
+      "last_attempt": "2026-05-14T19:18:18"
+    },
+    {
+      "resource_id": "event-wd7wg",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 1,
+      "last_attempt": "2026-05-11T00:58:04"
+    },
+    {
+      "resource_id": "event-xcwcq",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 4,
+      "last_attempt": "2026-05-15T01:24:20"
+    },
+    {
+      "resource_id": "event-xnj2v",
+      "lab": "ocp-cluster-aws-pools",
+      "catalog": "agd-v2.ocp-cluster-aws-pools",
+      "attempts": 1,
+      "last_attempt": "2026-05-13T22:12:00"
+    },
+    {
+      "resource_id": "event-xtggh",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 1,
+      "last_attempt": "2026-05-12T19:02:11"
+    },
+    {
+      "resource_id": "event-xzz4x",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:46"
+    },
+    {
+      "resource_id": "event-z2qkl",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:09"
+    },
+    {
+      "resource_id": "event-z6wmw",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:28"
+    },
+    {
+      "resource_id": "event-z6wwh",
+      "lab": "ocp-cluster-cnv-pools",
+      "catalog": "agd-v2.ocp-cluster-cnv-pools",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T14:34:26"
+    },
+    {
+      "resource_id": "event-zklxf",
+      "lab": "lb2144",
+      "catalog": "summit-2026.lb2144-agentops-ocp-cnv",
+      "attempts": 3,
+      "last_attempt": "2026-05-15T01:22:12"
+    },
+    {
+      "resource_id": "event-zpvtn",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 4,
+      "last_attempt": "2026-05-15T01:24:27"
+    },
+    {
+      "resource_id": "event-zvfx2",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-ppe-comp-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:47"
+    },
+    {
+      "resource_id": "event-zwg2q",
+      "lab": "ai-quickstarts",
+      "catalog": "ai-quickstarts.ai-qs-data-gov-tenant",
+      "attempts": 2,
+      "last_attempt": "2026-05-13T01:12:58"
+    }
+  ],
+  "orphan_by_catalog_prefix": {
+    "ai-quickstarts": 49,
+    "summit-2026": 11,
+    "agd-v2": 6
+  },
+  "retry_examples": [
+    {
+      "resource_id": "event-2jtqn",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-13T17:06:54",
+      "final_success": "2026-05-13T17:20:41"
+    },
+    {
+      "resource_id": "event-2vbmb",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-14T18:59:03",
+      "final_success": "2026-05-14T19:05:59"
+    },
+    {
+      "resource_id": "event-4bqzz",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-11T16:30:10",
+      "final_success": "2026-05-11T16:37:10"
+    },
+    {
+      "resource_id": "event-4dtw9",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-13T00:48:21",
+      "final_success": "2026-05-13T01:02:06"
+    },
+    {
+      "resource_id": "event-4dvjz",
+      "lab": "lb2144",
+      "fail_count": 3,
+      "success_count": 1,
+      "first_fail": "2026-05-13T17:04:13",
+      "final_success": "2026-05-13T20:01:06"
+    },
+    {
+      "resource_id": "event-4h86x",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-13T15:21:08",
+      "final_success": "2026-05-13T15:28:33"
+    },
+    {
+      "resource_id": "event-4lccr",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-13T15:20:53",
+      "final_success": "2026-05-13T15:27:51"
+    },
+    {
+      "resource_id": "event-4nzrl",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-13T00:25:11",
+      "final_success": "2026-05-13T00:38:57"
+    },
+    {
+      "resource_id": "event-4xpck",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-13T15:20:26",
+      "final_success": "2026-05-13T15:27:29"
+    },
+    {
+      "resource_id": "event-4zpjv",
+      "lab": "unknown",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-13T01:15:36",
+      "final_success": "2026-05-13T01:26:38"
+    },
+    {
+      "resource_id": "event-5cmtl",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-12T22:35:03",
+      "final_success": "2026-05-12T22:48:39"
+    },
+    {
+      "resource_id": "event-5fcl5",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-12T19:53:03",
+      "final_success": "2026-05-12T20:07:00"
+    },
+    {
+      "resource_id": "event-5zxvg",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-12T08:43:27",
+      "final_success": "2026-05-12T08:44:09"
+    },
+    {
+      "resource_id": "event-6mzv9",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-12T17:30:18",
+      "final_success": "2026-05-12T17:31:05"
+    },
+    {
+      "resource_id": "event-6v58c",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-13T15:20:43",
+      "final_success": "2026-05-13T15:27:48"
+    },
+    {
+      "resource_id": "event-7gwsq",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-14T18:59:08",
+      "final_success": "2026-05-14T19:06:06"
+    },
+    {
+      "resource_id": "event-7ncqv",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-13T15:21:13",
+      "final_success": "2026-05-13T15:28:42"
+    },
+    {
+      "resource_id": "event-8xjd2",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 2,
+      "first_fail": "2026-05-14T18:59:06",
+      "final_success": "2026-05-14T19:06:01"
+    },
+    {
+      "resource_id": "event-9d9hv",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-14T18:59:07",
+      "final_success": "2026-05-14T19:01:03"
+    },
+    {
+      "resource_id": "event-9nfgc",
+      "lab": "lb2144",
+      "fail_count": 1,
+      "success_count": 1,
+      "first_fail": "2026-05-13T15:20:09",
+      "final_success": "2026-05-13T15:21:56"
+    }
+  ]
+}
