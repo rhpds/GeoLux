@@ -136,8 +136,12 @@ class TestAuthenticatedUser:
         user = AuthenticatedUser("u1", roles=["geolux-admin"], auth_method="oidc")
         assert user.is_admin is True
 
-    def test_admin_with_api_key(self):
+    def test_api_key_without_roles_is_not_admin(self):
         user = AuthenticatedUser("api-key-user", auth_method="api_key")
+        assert user.is_admin is False
+
+    def test_api_key_with_admin_role_is_admin(self):
+        user = AuthenticatedUser("api-key-user", roles=["geolux-admin"], auth_method="api_key")
         assert user.is_admin is True
 
     def test_non_admin(self):

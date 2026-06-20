@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import logging
 import os
 import re
@@ -34,6 +35,17 @@ SSO_REALM = os.environ.get("GEOLUX_SSO_REALM", "redhat-external")
 TRUST_PROXY_AUTH = os.environ.get("GEOLUX_TRUST_PROXY_AUTH", "false").lower() == "true"
 ADMIN_API_KEY = os.environ.get("GEOLUX_ADMIN_API_KEY", "")
 ADMIN_ROLES = os.environ.get("GEOLUX_ADMIN_ROLES", "geolux-admin,platform-admin").split(",")
+
+def _load_api_keys() -> dict:
+    raw = os.environ.get("GEOLUX_API_KEYS", "")
+    if raw:
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return {}
+
+_API_KEYS = _load_api_keys()
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -120,7 +132,7 @@ class AuthenticatedUser:
 
     @property
     def is_admin(self) -> bool:
-        return any(r in ADMIN_ROLES for r in self.roles) or self.auth_method == "api_key"
+        return any(r in ADMIN_ROLES for r in self.roles)
 
 
 async def get_current_user(
@@ -146,12 +158,19 @@ async def get_current_user(
                 auth_method="oidc",
             )
 
-    # 2. API key
+    # 2. API key (scoped keys first, then legacy admin key)
     api_key = request.headers.get("X-API-Key", "")
-    if api_key and ADMIN_API_KEY:
-        if hmac.compare_digest(api_key, ADMIN_API_KEY):
+    if api_key:
+        for key, roles in _API_KEYS.items():
+            if hmac.compare_digest(api_key, key):
+                return AuthenticatedUser(
+                    user_id="api-key-user",
+                    roles=roles if isinstance(roles, list) else [roles],
+                    auth_method="api_key",
+                )
+        if ADMIN_API_KEY and hmac.compare_digest(api_key, ADMIN_API_KEY):
             return AuthenticatedUser(
-                user_id="api-key-user",
+                user_id="api-key-admin",
                 roles=ADMIN_ROLES,
                 auth_method="api_key",
             )
