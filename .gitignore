@@ -35,5 +35,8 @@ frontend/.vite/
 .DS_Store
 Thumbs.db
 
+# Receipts — generated output, do not commit
+receipts/
+
 # Scan history
 scan-history/

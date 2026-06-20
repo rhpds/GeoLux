@@ -2,7 +2,7 @@
 
 Extension of the Stargate platform for Red Hat Intel AI Platform. GeoLux adds geometric stability analysis, hypothesis-driven reasoning, constraint classification, model predictive control, and Deepfield routing to govern agentic inference workloads.
 
-**Live deployment:** https://geolux.apps.ocpv-infra01.dal12.infra.demo.redhat.com
+**Live deployment:** (set via `GEOLUX_DASHBOARD_URL`)
 
 ---
 

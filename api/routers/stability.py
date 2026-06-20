@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from db import repository
 from api.routers._shared import STABILITY_THRESHOLD, limiter
+from api.security import require_admin_user, AuthenticatedUser
 
 router = APIRouter(prefix="/stability", tags=["stability"])
 
@@ -57,7 +58,11 @@ def get_thresholds():
 
 @router.put("/thresholds")
 @limiter.limit("5/minute")
-def update_thresholds(request: Request, body: StabilityThresholdUpdate):
+def update_thresholds(
+    request: Request,
+    body: StabilityThresholdUpdate,
+    admin: AuthenticatedUser = Depends(require_admin_user),
+):
     if not (0.0 <= body.threshold <= 1.0):
         raise HTTPException(status_code=400, detail="Threshold must be between 0.0 and 1.0")
     import api.routers._shared as _shared

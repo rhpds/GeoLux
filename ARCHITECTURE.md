@@ -168,7 +168,7 @@ All tables prefixed `glx_` to avoid collision with Stargate tables.
 
 All specs in `contracts/openapi/*.yaml` (OpenAPI 3.1) and `contracts/asyncapi/*.yaml` (AsyncAPI 2.6).
 
-**Production deployment:** https://geolux.apps.ocpv-infra01.dal12.infra.demo.redhat.com
+**Production deployment:** (set via `GEOLUX_DASHBOARD_URL`)
 
 ---
 

@@ -6,9 +6,9 @@ description: >
   Updated post-deployment to infra01.
 
 deployment:
-  url: https://geolux.apps.ocpv-infra01.dal12.infra.demo.redhat.com
+  url: ""   # Set at deploy time
   namespace: geolux
-  cluster: ocpv-infra01.dal12.infra.demo.redhat.com
+  cluster: ""  # Set at deploy time
   mode: synthetic
 
 evaluation_dimensions:

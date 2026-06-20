@@ -33,8 +33,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 _cors_origins = os.environ.get(
-    "GEOLUX_CORS_ORIGINS",
-    os.environ.get("STARGATE_CORS_ORIGINS", "http://localhost:3000,http://localhost:8090"),
+    "GEOLUX_CORS_ORIGINS", "http://localhost:3000,http://localhost:8090"
 ).split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -166,8 +165,8 @@ def _launchpad_refresh_loop():
     lgr = logging.getLogger("geolux.launchpad")
     while not _shutdown_event.is_set():
         try:
-            sg_base = os.environ.get("STARGATE_API_URL", "http://stargate-api.stargate.svc:8090")
-            admin_key = os.environ.get("GEOLUX_ADMIN_API_KEY", os.environ.get("STARGATE_ADMIN_API_KEY", ""))
+            sg_base = os.environ.get("GEOLUX_STARGATE_API_URL", "")
+            admin_key = os.environ.get("GEOLUX_ADMIN_API_KEY", "")
             headers = {"X-API-Key": admin_key} if admin_key else {}
 
             labs_data = {}

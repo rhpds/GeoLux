@@ -255,17 +255,17 @@ class TestStabilityAPIIntegration:
         assert "stability_threshold" in data
         assert data["stability_threshold"] == 0.7
 
-    def test_update_thresholds_valid(self, client):
-        response = client.put("/stability/thresholds", json={"threshold": 0.85})
+    def test_update_thresholds_valid(self, client, admin_headers):
+        response = client.put("/stability/thresholds", json={"threshold": 0.85}, headers=admin_headers)
         assert response.status_code == 200
         assert response.json()["stability_threshold"] == 0.85
 
-    def test_update_thresholds_invalid_above_one(self, client):
-        response = client.put("/stability/thresholds", json={"threshold": 1.5})
+    def test_update_thresholds_invalid_above_one(self, client, admin_headers):
+        response = client.put("/stability/thresholds", json={"threshold": 1.5}, headers=admin_headers)
         assert response.status_code == 400
 
-    def test_update_thresholds_invalid_below_zero(self, client):
-        response = client.put("/stability/thresholds", json={"threshold": -0.1})
+    def test_update_thresholds_invalid_below_zero(self, client, admin_headers):
+        response = client.put("/stability/thresholds", json={"threshold": -0.1}, headers=admin_headers)
         assert response.status_code == 400
 
     def test_get_scores_with_filter(self, client):

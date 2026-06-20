@@ -32,7 +32,7 @@ SSO_ISSUER_URL = os.environ.get("GEOLUX_SSO_ISSUER_URL", "")
 SSO_CLIENT_ID = os.environ.get("GEOLUX_SSO_CLIENT_ID", "geolux")
 SSO_REALM = os.environ.get("GEOLUX_SSO_REALM", "redhat-external")
 TRUST_PROXY_AUTH = os.environ.get("GEOLUX_TRUST_PROXY_AUTH", "false").lower() == "true"
-ADMIN_API_KEY = os.environ.get("GEOLUX_ADMIN_API_KEY", os.environ.get("STARGATE_ADMIN_API_KEY", ""))
+ADMIN_API_KEY = os.environ.get("GEOLUX_ADMIN_API_KEY", "")
 ADMIN_ROLES = os.environ.get("GEOLUX_ADMIN_ROLES", "geolux-admin,platform-admin").split(",")
 
 _bearer_scheme = HTTPBearer(auto_error=False)

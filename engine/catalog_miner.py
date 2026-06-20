@@ -19,10 +19,7 @@ from db import repository
 
 logger = logging.getLogger("geolux.catalog_miner")
 
-LAUNCHPAD_API = os.environ.get(
-    "GEOLUX_LAUNCHPAD_API_URL",
-    os.environ.get("STARGATE_LAUNCHPAD_URL", "https://launchpad-api.apps.ocpv-infra01.dal12.infra.demo.redhat.com"),
-)
+LAUNCHPAD_API = os.environ.get("GEOLUX_LAUNCHPAD_API_URL", "")
 
 
 def mine_catalog(db: Session) -> dict:

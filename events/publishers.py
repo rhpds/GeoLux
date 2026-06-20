@@ -16,7 +16,7 @@ from typing import Optional
 logger = logging.getLogger("geolux.kafka")
 
 _producer = None
-_KAFKA_BROKERS = os.environ.get("GEOLUX_KAFKA_BROKERS", os.environ.get("STARGATE_KAFKA_BROKERS", ""))
+_KAFKA_BROKERS = os.environ.get("GEOLUX_KAFKA_BROKERS", "")
 
 
 def _get_producer():

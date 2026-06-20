@@ -101,14 +101,36 @@ The deployment configuration (`deploy/`, `podman-compose.yaml`) supports rolling
 
 ### HA PostgreSQL
 
-**Current state:** Single PostgreSQL instance (shared with Stargate).
+**Current state:** Single PostgreSQL instance, separate credentials.
 
-All GeoLux tables (`glx_*`) live in the shared Stargate PostgreSQL instance. Future work:
+All GeoLux tables (`glx_*`) live in the shared Stargate PostgreSQL instance. Credentials are now isolated (`GEOLUX_DATABASE_URL`), but both services use the same superuser role. Future work:
 
 - Streaming replication for read replicas (dashboard queries against replica)
 - Automatic failover for the primary instance
 - Connection pooling (PgBouncer) for high-concurrency MPC and classification workloads
 - Evaluate whether audit events (`glx_audit_events`, 365-day retention) should move to a separate instance to avoid bloating the primary
+
+---
+
+## Security Hardening (applied 2026-06-19)
+
+### Cross-Platform Credential Isolation
+
+All `STARGATE_*` environment variable fallbacks have been removed. GeoLux previously fell back to StarGate's admin API key, database URL, LiteLLM credentials, Kafka brokers, and CORS origins — meaning one leaked key was admin on both platforms, and a bad GeoLux migration could reach StarGate's live-cluster executor. Each platform now requires its own `GEOLUX_*` environment variables with no cross-product secret chain.
+
+### Stability Threshold Endpoint Authentication
+
+`PUT /stability/thresholds` now requires admin authentication. Previously unauthenticated — anyone could set the threshold to 0.0 and disable stability gating on all LLM calls (hypothesis generation, classification, MPC), or to 1.0 to suspend all operations.
+
+### Internal Hostname Exposure
+
+All hardcoded `.infra.demo.redhat.com` URLs removed from source code, docs, and rubrics. The live deployment URL was in README.md, ARCHITECTURE.md, INTEGRATION_MAP.md, and engine/catalog_miner.py.
+
+### Remaining Security Items
+
+- **SSL verification disabled in catalog_miner.py** — `ssl.CERT_NONE` when fetching Launchpad catalog. Vulnerable to MITM on internal network. Fix when internal CA chain is available.
+- **API key scope** — `is_admin` returns `True` for any valid API key regardless of origin. Future work: scoped keys with per-endpoint permissions.
+- **Shared PostgreSQL** — GeoLux `glx_*` tables still coexist with StarGate tables in the same database instance. Credentials are now separate, but a non-superuser DB role per service would further contain blast radius.
 
 ---
 
@@ -131,3 +153,7 @@ The following were identified as gaps during development and have been closed:
 | Pre-commit hooks | `.pre-commit-config.yaml` with secret detection |
 | Playwright config | `frontend/playwright.config.ts` |
 | SQLAlchemy enum fix | `values_callable` on all Enum columns for PostgreSQL compatibility |
+| Cross-platform secret fallbacks | All `STARGATE_*` fallbacks removed; each platform owns its credentials |
+| Stability threshold auth | `PUT /stability/thresholds` requires admin authentication |
+| Internal hostname exposure | All `.infra.demo.redhat.com` URLs replaced with env var references |
+| MPC auto-planning disabled | Kept disabled until Go operator and remediation actions exist |

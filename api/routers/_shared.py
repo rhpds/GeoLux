@@ -35,14 +35,14 @@ MPC_MIN_HISTORY_WEEKS = int(os.environ.get("GEOLUX_MPC_MIN_HISTORY_WEEKS", "4"))
 
 CONFIDENCE_THRESHOLD = float(os.environ.get("GEOLUX_CONFIDENCE_THRESHOLD", "0.7"))
 
-LITELLM_URL = os.environ.get("GEOLUX_LITELLM_URL", os.environ.get("STARGATE_LITELLM_URL", ""))
-LITELLM_API_KEY = os.environ.get("GEOLUX_LITELLM_API_KEY", os.environ.get("STARGATE_LITELLM_API_KEY", ""))
-LLM_MODEL = os.environ.get("GEOLUX_LLM_MODEL", os.environ.get("STARGATE_LLM_MODEL", "granite-3-2-8b-instruct"))
+LITELLM_URL = os.environ.get("GEOLUX_LITELLM_URL", "")
+LITELLM_API_KEY = os.environ.get("GEOLUX_LITELLM_API_KEY", "")
+LLM_MODEL = os.environ.get("GEOLUX_LLM_MODEL", "granite-3-2-8b-instruct")
 
-GAUDI_URL = os.environ.get("GEOLUX_GAUDI_URL", os.environ.get("STARGATE_GAUDI_URL", ""))
-XEON6_URL = os.environ.get("GEOLUX_XEON6_URL", os.environ.get("STARGATE_XEON6_URL", ""))
+GAUDI_URL = os.environ.get("GEOLUX_GAUDI_URL", "")
+XEON6_URL = os.environ.get("GEOLUX_XEON6_URL", "")
 
-ADMIN_API_KEY = os.environ.get("GEOLUX_ADMIN_API_KEY", os.environ.get("STARGATE_ADMIN_API_KEY", ""))
+ADMIN_API_KEY = os.environ.get("GEOLUX_ADMIN_API_KEY", "")
 
 # ── Rate Limiter ──────────────────────────────────────────────────────
 

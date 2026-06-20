@@ -14,7 +14,7 @@ from typing import Callable, Optional
 
 logger = logging.getLogger("geolux.kafka.consumer")
 
-_KAFKA_BROKERS = os.environ.get("GEOLUX_KAFKA_BROKERS", os.environ.get("STARGATE_KAFKA_BROKERS", ""))
+_KAFKA_BROKERS = os.environ.get("GEOLUX_KAFKA_BROKERS", "")
 
 
 class KafkaConsumerManager:

@@ -1,6 +1,6 @@
 # GeoLux Integration Map
 
-**Production:** https://geolux.apps.ocpv-infra01.dal12.infra.demo.redhat.com
+**Production:** (set via `GEOLUX_DASHBOARD_URL`)
 **Namespace:** geolux (OpenShift, infra01 cluster)
 **Database:** shared with Stargate (stargate-postgres.stargate.svc:5432, glx_ tables)
 

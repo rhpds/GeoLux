@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.environ.get("GEOLUX_DATABASE_URL", os.environ.get("STARGATE_DATABASE_URL", ""))
+DATABASE_URL = os.environ.get("GEOLUX_DATABASE_URL", "")
 
 Base = declarative_base()
 

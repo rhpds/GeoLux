@@ -54,6 +54,15 @@ def _override_get_db():
         Base.metadata.drop_all(bind=test_engine)
 
 
+import os as _os
+_os.environ.setdefault("GEOLUX_ADMIN_API_KEY", "test-admin-key")
+
+
+@pytest.fixture
+def admin_headers():
+    return {"X-API-Key": "test-admin-key"}
+
+
 @pytest.fixture
 def client():
     from api.app import app
