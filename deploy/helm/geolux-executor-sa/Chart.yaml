@@ -1,0 +1,4 @@
+apiVersion: v2
+name: geolux-executor-sa
+description: GeoLux executor ServiceAccount with namespace-scoped RBAC
+version: 0.1.0

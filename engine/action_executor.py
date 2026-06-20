@@ -77,6 +77,9 @@ class ActionExecutor:
             outcome = {"success": False, "error": str(e)}
             logger.warning("Action execution failed: %s — %s", action_type, e)
 
+        if not outcome.get("success") and "pods" in before_state:
+            self._rollback(before_state, parameters, db)
+
         after_state = self._capture_state(parameters)
 
         repository.create_audit_event(
@@ -122,17 +125,50 @@ class ActionExecutor:
             "reason": reason,
         }
 
+    def _rollback(self, before_state: dict, parameters: dict, db: Session) -> None:
+        """Attempt to restore pre-execution state on failure."""
+        from engine import k8s_client
+        namespace = parameters.get("namespace", k8s_client.EXECUTOR_NAMESPACE)
+        kubeconfig = k8s_client.EXECUTOR_KUBECONFIG
+        try:
+            result = k8s_client.apply_state(before_state, namespace, kubeconfig)
+            if result.get("success"):
+                logger.info("Rollback succeeded: restored %d resources", result.get("restored", 0))
+            else:
+                logger.error("Rollback failed: %s", result.get("error", "unknown"))
+        except Exception as e:
+            logger.error("Rollback exception: %s", e)
+        repository.create_audit_event(
+            db, source_component="action-executor",
+            event_type="action.rollback", payload_reference="rollback",
+        )
+
     def _execute_action(self, action_type: str, parameters: dict) -> dict:
-        """Execute the actual action. Override for specific action types."""
+        """Execute the actual action against a real cluster."""
+        from engine import k8s_client
+
+        namespace = parameters.get("namespace", k8s_client.EXECUTOR_NAMESPACE)
+        kubeconfig = k8s_client.EXECUTOR_KUBECONFIG
+
+        if not kubeconfig or not k8s_client.validate_kubeconfig(kubeconfig):
+            logger.warning("No valid executor kubeconfig — cannot execute")
+            return {"success": False, "error": "No valid executor kubeconfig"}
+
         if action_type == "scale_replicas":
+            deployment = parameters.get("deployment", "")
             target = parameters.get("target_replicas", 1)
-            logger.info("Scaling to %d replicas", target)
-            return {"success": True, "replicas": target}
+            if not deployment:
+                return {"success": False, "error": "Missing deployment name"}
+            return k8s_client.scale_deployment(deployment, target, namespace, kubeconfig)
 
         if action_type == "execute_remediation":
-            remediation_id = parameters.get("remediation_id", "")
-            logger.info("Executing remediation: %s", remediation_id)
-            return {"success": True, "remediation_id": remediation_id}
+            remediation_type = parameters.get("remediation_type", "rollout_restart")
+            target = parameters.get("target", "")
+            if not target:
+                return {"success": False, "error": "Missing remediation target"}
+            if remediation_type == "delete_pod":
+                return k8s_client.delete_pod(target, namespace, kubeconfig)
+            return k8s_client.rollout_restart(target, namespace, kubeconfig)
 
         if action_type == "no_action":
             return {"success": True, "action": "none"}
@@ -141,7 +177,17 @@ class ActionExecutor:
         return {"success": False, "error": f"Unknown action type: {action_type}"}
 
     def _capture_state(self, parameters: dict) -> dict:
-        """Capture current state for before/after comparison."""
+        """Capture current cluster state for before/after comparison."""
+        from engine import k8s_client
+
+        namespace = parameters.get("namespace", k8s_client.EXECUTOR_NAMESPACE)
+        kubeconfig = k8s_client.EXECUTOR_KUBECONFIG
+
+        if kubeconfig and k8s_client.validate_kubeconfig(kubeconfig) and namespace:
+            state = k8s_client.capture_namespace_state(namespace, kubeconfig)
+            state["captured_at"] = datetime.now(timezone.utc).isoformat()
+            return state
+
         return {
             "captured_at": datetime.now(timezone.utc).isoformat(),
             "parameters": parameters,

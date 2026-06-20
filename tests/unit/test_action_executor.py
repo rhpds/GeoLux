@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from unittest.mock import patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -24,16 +25,23 @@ def ae_db():
 
 
 class TestActionExecutor:
-    def test_executes_scale_action(self, ae_db):
+    @patch("engine.k8s_client.validate_kubeconfig", return_value=True)
+    @patch("engine.k8s_client.EXECUTOR_KUBECONFIG", "/mock/kc")
+    @patch("engine.k8s_client.scale_deployment", return_value={"success": True, "replicas": 5, "deployment": "web"})
+    @patch("engine.k8s_client.capture_namespace_state", return_value={"pods": [], "deployments": [], "services": []})
+    def test_executes_scale_action(self, mock_capture, mock_scale, mock_validate, ae_db):
         import api.routers._shared as _shared
         _shared.GEOLUX_MODE = "live"
 
         executor = ActionExecutor()
         result = executor.execute(
-            {"action_id": "a1", "action_type": "scale_replicas", "parameters": {"target_replicas": 5}, "confidence": 0.9},
+            {"action_id": "a1", "action_type": "scale_replicas",
+             "parameters": {"target_replicas": 5, "deployment": "web", "namespace": "test"},
+             "confidence": 0.9},
             ae_db, operator="admin", force=True,
         )
         assert result["executed"] is True
+        mock_scale.assert_called_once()
         _shared.GEOLUX_MODE = "live"
 
     def test_rejects_in_synthetic_mode(self, ae_db):

@@ -4,31 +4,73 @@ Spec deliverable #7. This document tracks capabilities that are specified but no
 
 ---
 
-## Specified but Deferred
+## Critical Path — Execution Layer
+
+GeoLux's intelligence layer is real: all four LLM engines (hypothesis, classification, MPC, Deepfield routing) make real LiteLLM calls with no faked outputs. But there is zero actual cluster read/write anywhere in the codebase (no kubernetes client, no oc/kubectl). GeoLux thinks for real and then stops at the point of acting.
+
+**Caution:** Because the effectors return `success: True` without doing anything, no demo or metric should imply GeoLux executed a real cluster change. Frame as "recommends/plans" until the effectors are wired.
+
+### Action Effectors
+
+**Status:** Gate harness is real, effectors are stubbed.
+
+The gate harness in `engine/action_executor.py` is fully functional — mode/dry-run/confidence gates, audit trail, event publishing. But `_execute_action()` just logs and returns success without touching a cluster:
+
+- `scale_replicas` → `logger.info("Scaling to %d replicas")` then `return {"success": True}` — no K8s API call
+- `execute_remediation` → same pattern, logs and returns success
+- `no_action` → returns success (correct behavior)
+
+This is the #1 gap to close. The entire governance pipeline is real; the last inch isn't wired. See `docs/k8s-effector-spec.md` for the implementation plan.
+
+### Before/After State Capture
+
+**Status:** Echoes input, does not read cluster state.
+
+`_capture_state()` returns the input parameters with a timestamp instead of reading real cluster state. The audit trail and any rollback story are currently hollow — they record what was asked, not what changed. Needs real cluster reads (pod counts, resource usage, health status) to be meaningful.
+
+### Go Kubernetes Operator
+
+**Status:** No Go code exists.
+
+The target architecture has a Go-based Kubernetes operator watching `mpc.action.recommended` events on Kafka and executing them as cluster operations. The Python `action_executor.py` is the interim path. The operator spec (CRD definitions, reconciliation logic, RBAC) is documented in `contracts/` but no Go code has been written. Intentionally deferred until the OpenShift deployment phase when cluster-level permissions and operator lifecycle management can be validated in situ.
+
+---
+
+## Fidelity Gaps — Real but Degraded
+
+### Activation Variance Measurement
+
+**Status:** Running on proxy methods, not the headline method.
+
+The primary "geometric stability" measurement is activation variance — measuring variance of internal model activations across token positions. This requires Gaudi/Xeon6 vLLM access to read model internals. The live code falls back to token-probability variance, logit entropy, and perplexity (measurable from standard API responses). The `StabilityMethod.ACTIVATION_VARIANCE` enum and database column exist; the method activates when vLLM hardware is available.
+
+### Stability Threshold Calibration
+
+**Status:** Default 0.7, unvalidated.
+
+The threshold gates every LLM decision (hypothesis generation, classification, MPC prediction). Chosen as a "reasonable start," never calibrated against production workloads. Likely needs per-endpoint thresholds. See "Requires Additional Research" below.
+
+### MPC Objective Functions
+
+**Status:** Optimization is real, targets are unspecified.
+
+The MPC controller optimizes candidate actions against an objective the caller supplies. No validated per-cluster objective functions exist, and weights aren't learned from history. The optimization machinery works; what it optimizes toward is unspecified.
+
+---
+
+## Performance / Deferred — Not Blockers
 
 ### Rust Nano Agents
 
 **Status:** Interface defined, Python implementation in place.
 
-The nano tier (`engine/deepfield.py`) routes deterministic boolean-check workloads to CPU. The spec defines a Rust implementation for nano agents to achieve sub-millisecond evaluation latency and minimal memory footprint. The Python `DeepfieldRouter` and rule-based classification serve as the current implementation. The Rust agent interface is defined in `contracts/` but no Rust code exists yet. Migration path: implement the Rust agent behind the same API contract, swap at the routing layer.
-
-### Go Kubernetes Operators
-
-**Status:** Deferred to deployment phase.
-
-The MPC controller (`engine/mpc.py`) outputs recommended actions. In the target architecture, a Go-based Kubernetes operator watches for `mpc.action.recommended` events on the Kafka topic and executes them as cluster operations (scaling, remediation, rollouts). Currently, action execution is handled by `engine/action_executor.py` as a Python stub. The operator spec (CRD definitions, reconciliation logic, RBAC) is documented but no Go code exists. This is intentionally deferred until the OpenShift deployment phase when cluster-level permissions and operator lifecycle management can be validated in situ.
+The nano tier (`engine/deepfield.py`) routes deterministic boolean-check workloads to CPU. The spec defines a Rust implementation for sub-millisecond evaluation latency. The Python `DeepfieldRouter` and rule-based classification are functionally complete. The Rust agent interface is defined in `contracts/` but no Rust code exists yet. Pure latency optimization.
 
 ### Agentic Coding Extension
 
 **Status:** Promotion gate spec in runbook, no code.
 
-The runbooks (`runbooks/`) define a promotion gate workflow where agentic coding tools (Claude Code, Cursor, etc.) must pass GeoLux's constraint classification before code changes are promoted. The gate spec defines the API contract (POST evidence bundle, receive pass/fail/inconclusive), required constraints (test coverage threshold, security scan pass, stability score minimum), and the escalation path for inconclusive results. No extension code, IDE plugin, or CI integration exists yet.
-
-### Activation Variance Measurement
-
-**Status:** Requires Gaudi/Xeon6 with vLLM.
-
-The primary geometric stability measurement method is activation variance -- measuring the variance of internal model activations across token positions. This requires direct access to model internals via vLLM running on Intel Gaudi or Xeon6 hardware. The current implementation (`api/stability/`) falls back to token probability variance, logit entropy, and perplexity, which are measurable from standard API responses. Activation variance will be enabled when the Gaudi/Xeon6 vLLM deployment is available; the `StabilityMethod.ACTIVATION_VARIANCE` enum and database column are already in place.
+The runbooks (`runbooks/`) define a promotion gate workflow where agentic coding tools must pass GeoLux's constraint classification before code changes are promoted. The gate spec defines the API contract, required constraints, and escalation path. No extension code, IDE plugin, or CI integration exists yet.
 
 ---
 

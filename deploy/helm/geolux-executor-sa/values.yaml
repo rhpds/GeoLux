@@ -1,0 +1,6 @@
+namespace: geolux-executor
+serviceAccount: geolux-executor
+
+executor:
+  enabled: false
+  namespace: geolux-test
