@@ -41,6 +41,11 @@ auth:
 cors:
   origins: "http://localhost:3000"
 
+oauth:
+  enabled: false
+  image: registry.redhat.io/openshift4/ose-oauth-proxy-rhel9:latest
+  cookieSecretName: geolux-oauth-cookie  # pragma: allowlist secret
+
 route:
   enabled: false
   host: ""

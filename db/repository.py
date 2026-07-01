@@ -283,7 +283,7 @@ def create_intelligence_record(db: Session, **kwargs) -> LaunchpadIntelligenceRe
     record = LaunchpadIntelligenceRecord(
         intelligence_id=kwargs.get("intelligence_id", _generate_id()),
         created_at=_now(),
-        **kwargs,
+        **{k: v for k, v in kwargs.items() if k not in ("intelligence_id", "created_at")},
     )
     db.add(record)
     db.flush()

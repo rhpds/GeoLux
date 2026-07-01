@@ -81,6 +81,7 @@ def _view_refresh_loop():
     time.sleep(5)
     lgr = logging.getLogger("geolux.views")
     while not _shutdown_event.is_set():
+        db = None
         try:
             from db.database import get_db
             from db.views import refresh_stability_summary, refresh_hypothesis_metrics, refresh_classification_rates
@@ -90,10 +91,12 @@ def _view_refresh_loop():
             _view_cache["hypothesis"] = refresh_hypothesis_metrics(db)
             _view_cache["classification"] = refresh_classification_rates(db)
             _view_cache["ts"] = time.time()
-            db.close()
             lgr.debug("View refresh complete")
         except Exception as e:
             lgr.debug("View refresh failed: %s", e)
+        finally:
+            if db is not None:
+                db.close()
         _shutdown_event.wait(60)
 
 
@@ -103,15 +106,18 @@ def _retention_loop():
     time.sleep(3600)
     lgr = logging.getLogger("geolux.retention")
     while not _shutdown_event.is_set():
+        db = None
         try:
             from db.database import get_db
             from engine.retention import RetentionManager
             db = next(get_db())
             result = RetentionManager().run(db)
             lgr.info("Retention cleanup: %s", result)
-            db.close()
         except Exception as e:
             lgr.debug("Retention cleanup failed: %s", e)
+        finally:
+            if db is not None:
+                db.close()
         _shutdown_event.wait(86400)
 
 
@@ -121,6 +127,7 @@ def _backfill_loop():
     _t.sleep(60)
     lgr = logging.getLogger("geolux.backfill")
     while not _shutdown_event.is_set():
+        db = None
         try:
             from db.database import get_db
             from engine.miners import EvaluationMiner, LabSummaryMiner, ClusterSummaryMiner
@@ -132,9 +139,11 @@ def _backfill_loop():
             ClusterSummaryMiner().run(db)
             recl = ReclamationMiner().run(db)
             lgr.info("Reclamation backfill: %s", recl)
-            db.close()
         except Exception as e:
             lgr.debug("Backfill failed: %s", e)
+        finally:
+            if db is not None:
+                db.close()
         _shutdown_event.wait(86400)
 
 
@@ -144,15 +153,18 @@ def _catalog_mining_loop():
     _t.sleep(120)
     lgr = logging.getLogger("geolux.catalog")
     while not _shutdown_event.is_set():
+        db = None
         try:
             from db.database import get_db
             from engine.catalog_miner import mine_catalog
             db = next(get_db())
             result = mine_catalog(db)
             lgr.info("Catalog mined: %s", result)
-            db.close()
         except Exception as e:
             lgr.debug("Catalog mining failed: %s", e)
+        finally:
+            if db is not None:
+                db.close()
         _shutdown_event.wait(3600)
 
 
@@ -284,6 +296,9 @@ def on_shutdown():
 
 # ── Routers ───────────────────────────────────────────────────────────
 
+from fastapi import Depends
+from api.security import verify_api_key
+
 from api.routers.health import router as health_router
 from api.routers.stability import router as stability_router
 from api.routers.hypothesis import router as hypothesis_router
@@ -295,16 +310,18 @@ from api.routers.scenarios import router as scenarios_router
 from api.routers.integration import router as integration_router
 from api.routers.governance import router as governance_router
 
+_auth = [Depends(verify_api_key)]
+
 app.include_router(health_router)
-app.include_router(stability_router)
-app.include_router(hypothesis_router)
-app.include_router(classification_router)
-app.include_router(mpc_router)
-app.include_router(deepfield_router)
-app.include_router(launchpad_router)
-app.include_router(scenarios_router)
-app.include_router(integration_router)
-app.include_router(governance_router)
+app.include_router(stability_router, dependencies=_auth)
+app.include_router(hypothesis_router, dependencies=_auth)
+app.include_router(classification_router, dependencies=_auth)
+app.include_router(mpc_router, dependencies=_auth)
+app.include_router(deepfield_router, dependencies=_auth)
+app.include_router(launchpad_router, dependencies=_auth)
+app.include_router(scenarios_router, dependencies=_auth)
+app.include_router(integration_router, dependencies=_auth)
+app.include_router(governance_router, dependencies=_auth)
 
 # Serve frontend static files if dist/ exists (combined deployment)
 from pathlib import Path as _Path
