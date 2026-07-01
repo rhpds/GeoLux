@@ -51,13 +51,23 @@ limiter = Limiter(key_func=get_remote_address)
 # ── Auth ──────────────────────────────────────────────────────────────
 
 
+TRUSTED_PROXY_HOSTS = set(
+    h.strip()
+    for h in os.environ.get("GEOLUX_TRUSTED_PROXY_HOSTS", "127.0.0.1,::1").split(",")
+    if h.strip()
+)
+
+
 def require_admin(request):
+    import hmac
     api_key = request.headers.get("X-API-Key", "")
-    proxy_user = request.headers.get("X-Forwarded-User", "")
-    if ADMIN_API_KEY and api_key == ADMIN_API_KEY:
+    if ADMIN_API_KEY and api_key and hmac.compare_digest(api_key, ADMIN_API_KEY):
         return api_key
+    proxy_user = request.headers.get("X-Forwarded-User", "")
     if proxy_user:
-        return proxy_user
+        client_host = getattr(getattr(request, "client", None), "host", None)
+        if client_host and client_host in TRUSTED_PROXY_HOSTS:
+            return proxy_user
     raise HTTPException(status_code=401, detail="Admin access required")
 
 

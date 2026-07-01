@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
 
 import api.routers._shared as _shared
+from api.security import verify_api_key
 
 router = APIRouter(tags=["health"])
 
@@ -25,7 +26,7 @@ def get_mode():
     return {"mode": _shared.GEOLUX_MODE, "valid_modes": list(_shared.VALID_MODES)}
 
 
-@router.put("/mode")
+@router.put("/mode", dependencies=[Depends(verify_api_key)])
 def set_mode(body: ModeUpdate):
     if body.mode not in _shared.VALID_MODES:
         raise HTTPException(

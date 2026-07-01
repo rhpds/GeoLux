@@ -226,7 +226,10 @@ def receive_events_batch(
     events: list[StarGateEvent],
     db: Session = Depends(get_db),
 ):
-    """Receive a batch of Stargate events."""
+    """Receive a batch of Stargate events (max 500)."""
+    if len(events) > 500:
+        from fastapi import HTTPException
+        raise HTTPException(400, f"Batch size {len(events)} exceeds maximum of 500")
     results = [process_stargate_event(e, db) for e in events]
     return {"processed": len(results), "results": results}
 
